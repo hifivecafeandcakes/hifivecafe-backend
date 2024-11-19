@@ -1375,6 +1375,36 @@ app.get("/website/reservation/category/subcategory", async (req, res) => {
                     .filter(value => value) : [];
                 console.log(cakes);
 
+                let photoShoots = (item.photoShoots && item.photoShoots != "" && item.photoShoots != null) ? Object.keys(JSON.parse(item.photoShoots))
+                    .map(key => JSON.parse(item.photoShoots)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(cakes);
+
+                let photoShootPrices = (item.photoShootPrices && item.photoShootPrices != "" && item.photoShootPrices != null) ? Object.keys(JSON.parse(item.photoShootPrices))
+                    .map(key => JSON.parse(item.cakes)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(photoShootPrices);
+
+                let photoPrints = (item.photoPrints && item.photoPrints != "" && item.photoPrints != null) ? Object.keys(JSON.parse(item.photoPrints))
+                    .map(key => JSON.parse(item.cakes)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(photoPrints);
+
+                let photoPrintPrices = (item.photoPrintPrices && item.photoPrintPrices != "" && item.photoPrintPrices != null) ? Object.keys(JSON.parse(item.photoPrintPrices))
+                    .map(key => JSON.parse(item.photoPrintPrices)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(photoPrintPrices);
+
+                let flowers = (item.flowers && item.flowers != "" && item.flowers != null) ? Object.keys(JSON.parse(item.flowers))
+                    .map(key => JSON.parse(item.flowers)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(flowers);
+
+                let flowersPrices = (item.flowersPrices && item.flowersPrices != "" && item.flowersPrices != null) ? Object.keys(JSON.parse(item.flowersPrices))
+                    .map(key => JSON.parse(item.flowersPrices)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(flowersPrices);
+
                 return {
                     reser_sub_id: item.reser_sub_id,
                     sub_tilte: item.sub_tilte,
@@ -1399,6 +1429,12 @@ app.get("/website/reservation/category/subcategory", async (req, res) => {
                     cat_title: item.cat_title,
                     cat_image: baseImageUrl + item.cat_image,
 
+                    photoShoots: photoShoots,
+                    photoShootPrices: photoShootPrices,
+                    photoPrints: photoPrints,
+                    photoPrintPrices: photoPrintPrices,
+                    flowers: flowers,
+                    flowersPrices: flowersPrices
                 };
             });
             objfile['reservation_subcategory'] = result;
@@ -1439,126 +1475,84 @@ app.post("/website/reservation/booking/create", async (req, res) => {
     const userResult = await executeQuery(`SELECT * FROM users WHERE id = ?`, [userid]); //check user exist in DB   
     if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
 
-    const { reser_id, reser_catid, resersubcatid, type, date, time, peoples, menu_type, veg_or_nonveg, guest_name, cake, cake_msg, remarks } = req.body;
+    const { reser_id, reser_catid, resersubcatid } = req.body;
+    const { type, date, time, peoples, guest_name, remarks } = req.body;
+    const { menu_type, veg_or_nonveg } = req.body;
+    const { cake, cake_msg, cake_weight, cake_shape } = req.body;
+    const { photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice } = req.body;
+    const { total, price } = req.body;
 
-    if (type === "CL" || type === "BP" || type === "TA") {
-        if (type === "CL" && (!date || !time || !peoples || !menu_type || !reser_id || !reser_catid || !resersubcatid)) {
-            return res.json({ Response: { Success: "0", Message: "Please Provide Valid candle light dinner Details" } });
-        }
-
-        if (type === "BP" && (!date || !time || !peoples || !photohanging || !photoshoot || !bouquet || !firecracks || !decription || !reser_id || !reser_catid || !resersubcatid || !flaver)) {
-            return res.json({ Response: { Success: "0", Message: "Please Provide Valid birthday party Details" } });
-        }
-
-        if (type === "TA" && (!date || !time || !peoples || !reser_id || !reser_catid || !resersubcatid)) {
-            return res.json({ Response: { Success: "0", Message: "Please Provide Valid table booking Details" } });
-        }
-
-        let bookingStatus = "Created";
-        // ["Created","Booked"]
-
-        let formatDate = new Date();
-        if (type === "CL") {
-            const reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [resersubcatid]); //check user exist in DB   
-            const insertCandleLightDinnerQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people, menu_type, veg_or_nonveg,guest_name,cake,cake_msg,remarks,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
-            const sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, menu_type, veg_or_nonveg, guest_name, cake, cake_msg, remarks, bookingStatus, formatDate];
-
-            con.query(insertCandleLightDinnerQuery, sqlValues, async (error, result) => {
-                if (error) {
-                    console.log(error)
-                    return res.json({ Response: { Success: "0", Message: "Booking failed" } });
-                } else {
-                    const reservationId = result.insertId;
-                    // await mailbooking(reservationId, res)
-                    let razorPayCreate = await createOrder({ amount: reservationSubCategory[0].sub_cat_price_range, receipt: userid.toString() })
-
-                    if (!razorPayCreate.success) {
-                        return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
-                    }
-                    let RazorpayOrder = razorPayCreate.order;
-
-                    //Update razorpay_order_id
-                    const formatedate = new Date()
-                    const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
-                    con.query(sql2, [RazorpayOrder.id, formatedate], (Error, result) => {
-                        if (Error) {
-                            console.log(Error)
-                            return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
-                        } else {
-                            return res.json({
-                                Response: {
-                                    Success: "1", Message: "Booked!",
-                                    ReservationId: reservationId,
-                                    RazorpayOrder: RazorpayOrder,
-                                    reservationSubCategory: reservationSubCategory,
-                                    user: userResult
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        } else if (type === "BP") {
-            const getValidNumber = (value) => {
-                return isNaN(Number(value)) ? 0 : Number(value);
-            };
-            const final_amt = getValidNumber(photohanging) + getValidNumber(photoshoot) + getValidNumber(bouquet) + getValidNumber(firecracks) + getValidNumber(party_amt);
-            console.log("final_amt", final_amt)
-            const insertBirthdayQuery = `INSERT INTO reservation_booking (reservation_id, reservation_catid, reservation_sub_catid, user_id,reservation_type, date, time, total_people, photo_hanging, photo_shoot, bouquet, fire_crackers, balloon, cake_shape, cake_weight, cake_decription,description, flavour, final_amt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-            const sqlValues = [
-                reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples,
-                photohanging, photoshoot, bouquet, firecracks, balloon, cake_shape,
-                cake_weight, cake_decription, decription, flaver, final_amt, formatDate
-            ];
-            con.query(insertBirthdayQuery, sqlValues, async (error, result) => {
-                if (error) {
-                    console.log(error)
-                    return res.json({
-                        Response: {
-                            Success: "0",
-                            Message: "Booking failed"
-                        }
-                    });
-                } else {
-                    const reservationId = result.insertId;
-                    await birthdaymailbooking(reservationId)
-                    return res.json({
-                        Response: {
-                            Success: "1",
-                            Message: "Booked!"
-                        }
-                    });
-                }
-            });
-        } else if (type === "TA") {
-            const insertTableBookingQuery = `
-            INSERT INTO reservation_booking (
-              reservation_id, reservation_catid, reservation_sub_catid, user_id, 
-              reservation_type, date, time, total_people, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `;
-            const sqlValues = [
-                reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, formatDate
-            ];
-
-            con.query(insertTableBookingQuery, sqlValues, async (error, result) => {
-                if (error) {
-                    return res.json({ Response: { Success: "0", Message: "Booking failed" } });
-                } else {
-                    const reservationId = result.insertId;
-                    await mailbooking(reservationId)
-                    return res.json({
-                        Response: {
-                            Success: "1",
-                            Message: "Booked!"
-                        }
-                    });
-                }
-            });
-        }
-    } else {
-        return res.json({ Response: { Success: "0", Message: "Please Provide Valid Booking Type" } });
+    if (!reser_id || !reser_catid || !resersubcatid) {
+        return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
     }
+
+    if ((type === "CL" || reser_id == 1) && (!date || !time || !guest_name
+        || !peoples || !menu_type || !total || !price)) {
+        return res.json({ Response: { Success: "0", Message: "Please Provide Valid candle light dinner Details" } });
+    }
+
+    if ((type === "BP" || reser_id == 2) && (!date || !time || !peoples || !guest_name
+        || !cake || !cake_msg || !cake_shape || !cake_weight || !total || !price)) {
+        return res.json({ Response: { Success: "0", Message: "Please Provide Valid birthday party Details" } });
+    }
+
+    if ((type === "TA" || reser_id == 3) && (!date || !time || !peoples || !total || !price)) {
+        return res.json({ Response: { Success: "0", Message: "Please Provide Valid table booking Details" } });
+    }
+
+    let bookingStatus = "Created";
+    // ["Created","Booked"]
+
+    let formatDate = new Date();
+    let reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [resersubcatid]); //check user exist in DB   
+    let insertQuery = "";
+    let sqlValues = [];
+
+    if (type === "CL" || reser_id == 1) {
+        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people, menu_type, veg_or_nonveg,guest_name,cake,cake_msg,comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)`;
+        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, menu_type, veg_or_nonveg, guest_name, cake, cake_msg, remarks, bookingStatus, formatDate];
+    } else if (type === "BP" || reser_id == 2) {
+
+    } else {
+
+    }
+
+    con.query(insertCandleLightDinnerQuery, sqlValues, async (error, result) => {
+        if (error) {
+            console.log(error)
+            return res.json({ Response: { Success: "0", Message: "Booking failed" } });
+        } else {
+            const reservationId = result.insertId;
+            // await mailbooking(reservationId, res)
+            let razorPayCreate = await createOrder({ amount: reservationSubCategory[0].sub_cat_price_range, receipt: userid.toString() })
+
+            if (!razorPayCreate.success) {
+                return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
+            }
+            let RazorpayOrder = razorPayCreate.order;
+
+            //Update razorpay_order_id
+            const formatedate = new Date()
+            const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
+            con.query(sql2, [RazorpayOrder.id, formatedate], (Error, result) => {
+                if (Error) {
+                    console.log(Error)
+                    return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
+                } else {
+                    return res.json({
+                        Response: {
+                            Success: "1", Message: "Booked!",
+                            ReservationId: reservationId,
+                            RazorpayOrder: RazorpayOrder,
+                            reservationSubCategory: reservationSubCategory,
+                            user: userResult
+                        }
+                    });
+                }
+            });
+        }
+    });
+
 });
 
 
