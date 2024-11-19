@@ -1,0 +1,251 @@
+< !DOCTYPE html>
+    <html dir="ltr" xmlns="http://www.w3.org/1999/xhtml" xmlns:o="urn:schemas-microsoft-com:office:office">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta content="width=device-width, initial-scale=1" name="viewport">
+        <meta name="x-apple-disable-message-reformatting">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta content="telephone=no" name="format-detection">
+        <link href="https://fonts.googleapis.com/css2?family=Rubik+Scribble&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Courgette&family=Rubik+Scribble&display=swap"
+            rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Lobster&display=swap"
+            rel="stylesheet">
+        <title>Reservation Confirmation</title>
+        <style>
+            .over_all {
+                background: linear-gradient(to bottom, rgba(255, 215, 0, 0.9), rgba(0, 0, 0, 0.8),
+                        rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8), rgba(255, 215, 0, 0.9));
+                background-position: center;
+                background-size: cover;
+                background-repeat: no-repeat;
+                border-radius: 3vh;
+                width: 50%;
+                margin-left: auto;
+                margin-right: auto;
+                padding-bottom: 3vh;
+                padding-top: 2vh;
+            }
+
+            #logo {
+                display: block;
+                box-shadow:
+                    0 0 10px rgba(255, 215, 0, 0.8),
+                    0 0 20px rgba(255, 215, 0, 0.9),
+                    0 0 20px rgba(255, 215, 0, 0.9);
+                border-radius: 50%;
+                background-color: black;
+                margin-top: 2vh;
+                padding: 1vh;
+                width: 14vh;
+            }
+
+            h1 {
+                margin - top: 2vh;
+                margin-bottom: 0;
+                font-family: Lobster;
+            }
+
+            .top_content {
+                font - size: 2.6vh;
+                margin-left: 5vh;
+                font-family: Lobster;
+            }
+
+            .content {
+                color: white;
+                align-items: start;
+                padding-left: 5vh;
+                padding-right: 5vh;
+            }
+
+            .bill_table {
+                background - image: url('https://img.freepik.com/free-vector/yellow-diagonal-geometric-striped-background-with-halftone-detailed_1409-1451.jpg?w=1380&t=st=1711880527~exp=1711881127~hmac=d6c710b52ef8ad9c099eb3e16469a5e0914d54d6e436dec891cc2e6b977cd654');
+                background-position: center;
+                background-size: cover;
+                background-repeat: no-repeat;
+                border-radius: 1vh;
+                width: 70%;
+                border: 2px solid #fcb713;
+                border-collapse: collapse;
+                margin: 0 auto;
+                text-align: center;
+                color: #000;
+                font-family: Courgette;
+                margin-top: 3vh;
+            }
+
+            tr {
+                font - weight: 400;
+                font-size: 3vh;
+            }
+
+            .tr_head {
+                font - weight: bolder;
+                font-size: 3vh;
+            }
+
+            .btm_content {
+                font - size: 2.6vh;
+                font-family: Lobster;
+            }
+
+            .footer {
+                display: flex;
+                justify-content: space-around;
+                width: 90%;
+                text-align: center;
+            }
+
+            .footer_content {
+                color: white;
+                font-size: 2.6vh;
+                font-family: Lobster;
+            }
+
+            @media all and (max-width: 425px) {
+                .over_all {
+                    background: linear-gradient(to bottom, rgba(255, 215, 0, 0.9), rgba(0, 0, 0, 0.8),
+                            rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8), rgba(255, 215, 0, 0.9));
+                    background-position: center;
+                    background-size: cover;
+                    background-repeat: no-repeat;
+                    border-radius: 3vh;
+                    width: 100%;
+                    margin-left: auto;
+                    margin-right: auto;
+                    padding-bottom: 3vh;
+                }
+
+                #logo {
+                    display: block;
+                    box-shadow:
+                        0 0 10px rgba(255, 215, 0, 0.8),
+                        0 0 20px rgba(255, 215, 0, 0.9),
+                        0 0 20px rgba(255, 215, 0, 0.9);
+                    border-radius: 50%;
+                    background-color: black;
+                    margin-top: 2vh;
+                    padding: 1vh;
+                    width: 6vh;
+                }
+
+                h1 {
+                    margin - top: 0;
+                    margin-bottom: 0;
+                    font-family: Lobster;
+                    font-size: 2.5vh;
+                    margin-top: 2vh;
+                }
+
+                .top_content {
+                    font - size: 1.6vh;
+                    margin-left: 2vh;
+                    font-family: Lobster;
+                }
+
+                .content {
+                    color: white;
+                    align-items: start;
+                    padding-left: 1.5vh;
+                    padding-right: 1.5vh;
+                }
+
+                .bill_table {
+                    background - image: url('https://img.freepik.com/free-vector/yellow-diagonal-geometric-striped-background-with-halftone-detailed_1409-1451.jpg?w=1380&t=st=1711880527~exp=1711881127~hmac=d6c710b52ef8ad9c099eb3e16469a5e0914d54d6e436dec891cc2e6b977cd654');
+                    background-position: center;
+                    background-size: cover;
+                    background-repeat: no-repeat;
+                    border-radius: 1vh;
+                    width: 100%;
+                    border: 2px solid #fcb713;
+                    border-collapse: collapse;
+                    margin: 0 auto;
+                    text-align: center;
+                    color: #000;
+                    font-family: Courgette;
+                    margin-top: 3vh;
+                }
+
+                tr {
+                    font - weight: 400;
+                    font-size: 1.6vh;
+                }
+
+                .tr_head {
+                    font - weight: bolder;
+                    font-size: 2vh;
+                }
+
+                .btm_content {
+                    font - size: 1.6vh;
+                    font-family: Lobster;
+                }
+
+                .footer {
+                    display: flex;
+                    flex-direction: row;
+                    justify-content: space-around;
+                    width: 100%;
+                    text-align: center;
+                }
+
+                .footer_content {
+                    color: white;
+                    font-size: 1.6vh;
+                    font-family: Lobster;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="over_all">
+            <table style="text-align: center; margin: 0 auto;">
+                <tr>
+                    <td style="display: flex; justify-content: center;">
+                        <img id="logo" class="adapt-img esdev-stretch-width esdev-banner-rendered"
+                            src="http://hifivecafe.com/wp-content/uploads/2021/03/Hifive-Logo-1.png" alt="title">
+                    </td>
+                </tr>
+            </table>
+
+            <div class="content">
+                <h1>Dear Customer , welcome to Hifive</h1>
+                <p class="top_content">We are thrilled to inform you that your table reservation has been successfully
+                    confirmed! Thank you for choosing Hifive Cafe for your special occasion.</p>
+
+                <h2>Reservation Details</h2>
+                <h6>${reservationDetails.reservation_type}</h6>
+                <p class="top_content">
+                    Reservation Category: ${reservationDetails.cat_title}<br>
+                    Price Range: ${reservationDetails.price_range}<br>
+                    Reservation Sub Category: ${reservationDetails.sub_tilte}<br>
+                    Sub Category Price Range: ${reservationDetails.sub_cat_price_range}<br>
+                    Booking Date: ${new Date(reservationDetails.date).toLocaleDateString()}<br>
+                    Booking Time: ${reservationDetails.time}<br>
+                    Name: ${reservationDetails.name}<br>
+                    Email: ${reservationDetails.email}<br>
+                    Mobile: ${reservationDetails.mobile}
+                </p>
+
+                <p class="btm_content">
+                    Please review the details above and let us know if there are any discrepancies or if you require any
+                    further modifications.
+                    <br><br>
+                    Your reservation is scheduled for the mentioned date and time. We look forward to serving you.
+                    <br><br>
+                    Should you have any questions or concerns regarding your reservation, feel free to reach out to us
+                    at the below contact number.
+                </p>
+
+                <div class="footer">
+                    <p class="footer_content">📞9940888633</p>
+                    <p class="footer_content">📧contact@hifivecafe.com</p>
+                </div>
+            </div>
+        </div>
+    </body>
+
+    </html>
