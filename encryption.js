@@ -1,6 +1,8 @@
 // encryption.js
 import crypto from 'crypto'
 import config from './config.js'
+import dotenv from 'dotenv'
+dotenv.config()
 
 
 const { secret_key, secret_iv, ecnryption_method } = config
@@ -38,6 +40,6 @@ export function decryptData(encryptedData) {
     const decipher = crypto.createDecipheriv(ecnryption_method, key, encryptionIV)
     return (
         decipher.update(buff.toString('utf8'), 'hex', 'utf8') +
-        decipher.final('utf8')
-    ) // Decrypts data and converts to utf8
+            decipher.final('utf8')
+        ) // Decrypts data and converts to utf8
 }

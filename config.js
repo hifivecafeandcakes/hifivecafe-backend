@@ -1,5 +1,4 @@
 import dotenv from 'dotenv'
-
 dotenv.config()
 
 const { NODE_ENV, PORT, SECRET_KEY, SECRET_IV, ECNRYPTION_METHOD } = process.env
