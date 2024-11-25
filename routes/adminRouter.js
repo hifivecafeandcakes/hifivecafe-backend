@@ -12,7 +12,7 @@ const router = express.Router();
 
 
 // http://localhost:3004/admin/register?name=admin&email=admin@gmail.com&password=password&mobile=9876552369
-router.get("/register", async (req, res) => {
+router.get("/backend/register", async (req, res) => {
     try {
         let name = req.query.name;
         let email = req.query.email;
@@ -61,7 +61,7 @@ router.get("/register", async (req, res) => {
 
 
 // admin login
-router.post("/login/token", async (req, res) => {
+router.post("/backend/login/token", async (req, res) => {
     try {
         console.log('login');
         const { uname, pw } = req.body;
@@ -115,7 +115,7 @@ router.post("/login/token", async (req, res) => {
 })
 
 //admin reservation list 
-router.get("/reservation/list", async (req, res) => {
+router.get("/backend/reservation/list", async (req, res) => {
     let sql = `select * from reservation order by reser_id ASC`
 
     const exesqlquery = await executeQuery(sql)
@@ -150,7 +150,7 @@ router.get("/reservation/list", async (req, res) => {
 })
 
 
-router.get("/reservation/get/:id", async (req, res) => {
+router.get("/backend/reservation/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
     const exesqlquery = await executeQuery(sql)
@@ -186,7 +186,7 @@ router.get("/reservation/get/:id", async (req, res) => {
 })
 
 //admin reservation add 
-router.post("/reservation/add", async (req, res) => {
+router.post("/backend/reservation/add", async (req, res) => {
     try {
         // console.log(req.files);
         const { reser_title, reser_main_title, description, status } = req.body;
@@ -230,7 +230,7 @@ router.post("/reservation/add", async (req, res) => {
 
 
 //admin reservation update 
-router.post("/reservation/update", async (req, res) => {
+router.post("/backend/reservation/update", async (req, res) => {
     try {
         const { id, reser_title, reser_main_title, description, status } = req.body;
 
@@ -290,7 +290,7 @@ router.post("/reservation/update", async (req, res) => {
     }
 });
 
-router.get("/reservation/delete/:id", async (req, res) => {
+router.get("/backend/reservation/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
     const deletingRecord = await executeQuery(sql)
@@ -331,7 +331,7 @@ router.get("/reservation/delete/:id", async (req, res) => {
     }
 })
 
-router.get("/reservation/select", async (req, res) => {
+router.get("/backend/reservation/select", async (req, res) => {
     const exesqlquery = await executeQuery(`select * from reservation where status="Active" order by reser_id ASC`)
     let result = [];
     if (exesqlquery.length > 0) {
@@ -349,7 +349,7 @@ router.get("/reservation/select", async (req, res) => {
 
 
 //admin reservation catgeory list 
-router.get("/reservation/category/list", async (req, res) => {
+router.get("/backend/reservation/category/list", async (req, res) => {
     let sql = `select reservation_category.*, reservation.reser_main_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_category.cat_id ASC`
 
     const exesqlquery = await executeQuery(sql)
@@ -380,7 +380,7 @@ router.get("/reservation/category/list", async (req, res) => {
 })
 
 
-router.get("/reservation/category/get/:id", async (req, res) => {
+router.get("/backend/reservation/category/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select reservation_category.*, reservation.reser_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reservation_category.cat_id=${id}`
     const exesqlquery = await executeQuery(sql)
@@ -409,7 +409,7 @@ router.get("/reservation/category/get/:id", async (req, res) => {
 })
 
 //admin reservation add 
-router.post("/reservation/category/add", async (req, res) => {
+router.post("/backend/reservation/category/add", async (req, res) => {
     try {
         // console.log(req.files);
         const { cat_title, reser_id, price_range, status } = req.body;
@@ -437,7 +437,7 @@ router.post("/reservation/category/add", async (req, res) => {
 
 
 //admin reservation update 
-router.post("/reservation/category/update", async (req, res) => {
+router.post("/backend/reservation/category/update", async (req, res) => {
     try {
         const { id, cat_title, reser_id, price_range, status } = req.body;
 
@@ -469,7 +469,7 @@ router.post("/reservation/category/update", async (req, res) => {
     }
 });
 
-router.get("/reservation/category/delete/:id", async (req, res) => {
+router.get("/backend/reservation/category/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation_category where cat_id=${id}`
     const deletingRecord = await executeQuery(sql)
@@ -499,7 +499,7 @@ router.get("/reservation/category/delete/:id", async (req, res) => {
 
 
 //admin reservation list 
-router.get("/reservation/subcategory/list", async (req, res) => {
+router.get("/backend/reservation/subcategory/list", async (req, res) => {
 
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.cat_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_sub_category.reser_sub_id ASC`
     const exesqlquery = await executeQuery(sql)
@@ -537,7 +537,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
 })
 
 
-router.get("/reservation/subcategory/get/:id", async (req, res) => {
+router.get("/backend/reservation/subcategory/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.reser_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reser_sub_id=${id}`
     const exesqlquery = await executeQuery(sql)
@@ -592,7 +592,7 @@ router.get("/reservation/subcategory/get/:id", async (req, res) => {
 })
 
 //admin reservation add 
-router.post("/reservation/subcategory/add", async (req, res) => {
+router.post("/backend/reservation/subcategory/add", async (req, res) => {
     try {
         // console.log(req.files);
         const { sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
@@ -668,7 +668,7 @@ router.post("/reservation/subcategory/add", async (req, res) => {
 
 
 //admin reservation update 
-router.post("/reservation/subcategory/update", async (req, res) => {
+router.post("/backend/reservation/subcategory/update", async (req, res) => {
     try {
         const { id, sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
         const sub_img = req.files && req.files.sub_img ? req.files.sub_img : null;
@@ -768,7 +768,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
     }
 });
 
-router.get("/reservation/subcategory/delete/:id", async (req, res) => {
+router.get("/backend/reservation/subcategory/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation_sub_category where reser_sub_id=${id}`
     const deletingRecord = await executeQuery(sql)
@@ -820,7 +820,7 @@ router.get("/reservation/subcategory/delete/:id", async (req, res) => {
 })
 
 
-router.get("/category/select/:reser_id", async (req, res) => {
+router.get("/backend/category/select/:reser_id", async (req, res) => {
     const { reser_id } = req.params;
 
     let sql = `select * from reservation_category where status="Active" order by cat_id ASC`;

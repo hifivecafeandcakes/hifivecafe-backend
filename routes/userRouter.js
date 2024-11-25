@@ -67,7 +67,7 @@ router.post('/register', async (req, res) => {
 
 
 // =========================================signin=============================================
-router.post("/signin", async (req, res) => {
+router.post("/backend/signin", async (req, res) => {
     try {
         let email = req.body.email;
         let password = req.body.password;
@@ -114,7 +114,7 @@ router.post("/signin", async (req, res) => {
 })
 
 
-router.get("/reservation/list", async (req, res) => {
+router.get("/backend/reservation/list", async (req, res) => {
     const reser_id = req.query.reser_id
     let sql;
     let objfile = {};
@@ -163,7 +163,7 @@ router.get("/reservation/list", async (req, res) => {
 })
 
 
-router.get("/reservation/category/list", async (req, res) => {
+router.get("/backend/reservation/category/list", async (req, res) => {
 
     const reser_id = req.query.reser_id;
 
@@ -217,7 +217,7 @@ router.get("/reservation/category/list", async (req, res) => {
 })
 
 
-router.get("/reservation/subcategory/list", async (req, res) => {
+router.get("/backend/reservation/subcategory/list", async (req, res) => {
 
     const reser_id = req.query.reser_id;
     const resercat_id = req.query.resercat_id;
@@ -277,7 +277,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
 
 
 
-router.get("/reservation/category/subcategory", async (req, res) => {
+router.get("/backend/reservation/category/subcategory", async (req, res) => {
     try {
         let objfile = {};
         let Arrayresposne = [];
@@ -411,7 +411,7 @@ router.get("/reservation/category/subcategory", async (req, res) => {
 
 // ------------------------------------------------------------------reservation booking api
 
-router.post("/reservation/booking/create", async (req, res) => {
+router.post("/backend/reservation/booking/create", async (req, res) => {
 
     let { userid } = req.body;
     if (!userid) { return res.send({ Response: { success: '0', message: "User Id is required!", } }); }
@@ -530,7 +530,7 @@ router.post("/reservation/booking/create", async (req, res) => {
 
 // ------------------------------------------------------------------Reservation Booking update
 // update payment status
-router.post("/reservation/booking/update", async (req, res) => {
+router.post("/backend/reservation/booking/update", async (req, res) => {
 
     console.log(req.body);
     const { razorpay_payment_status, booking_id, razorpay_payment_id } = req.body;
@@ -583,7 +583,7 @@ router.post("/reservation/booking/update", async (req, res) => {
 
 // ------------------------------------------------------------------Reservation Booking list
 // Cart
-router.post("/order/api", async (req, res) => {
+router.post("/backend/order/api", async (req, res) => {
     try {
         let { userid } = req.body;
         // let userid = 61008;
