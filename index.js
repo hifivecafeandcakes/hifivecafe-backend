@@ -27,6 +27,11 @@ app.get("/backend/test", (req, res) => {
     res.send("success");
 })
 
+app.get("/test1", (req, res) => {
+    console.log("Connected to database1");
+    res.send("success");
+})
+
 app.use('/backend/website', userRouter);
 
 // Use the admin router
