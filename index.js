@@ -22,15 +22,15 @@ app.use("/" + process.env.UPLOAD_IMAGE_DIR, express.static(process.env.UPLOAD_IM
 app.use("/" + process.env.UPLOAD_VIDEO_DIR, express.static(process.env.UPLOAD_VIDEO_DIR));
 
 
-app.get("/test", (req, res) => {
+app.get("/backend/test", (req, res) => {
     console.log("Connected to database");
     res.send("success");
 })
 
-app.use('/website', userRouter);
+app.use('/backend/website', userRouter);
 
 // Use the admin router
-app.use('/admin', adminRouter);
+app.use('/backend/admin', adminRouter);
 
 
 
