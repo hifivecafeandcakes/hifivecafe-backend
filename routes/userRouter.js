@@ -774,7 +774,7 @@ router.post("/order/api", async (req, res) => {
 
             res.send({ Response: { Success: "1", Message: "Success", Result: result } })
         } else {
-            res.send({ Response: { Success: "0", Message: "NO Records", Result: [] } });
+            res.send({ Response: { Success: "1", Message: "NO Records", Result: [] } });
         }
     } catch (error) {
         return res.status(500).json({ success: '0', message: error.message, Result: [] });
