@@ -1,5 +1,5 @@
 import { baseImageUrl, baseVideoUrl, deleteImageUrl, deleteVideoUrl } from '../constants.js';
-import { executeQuery} from '../dbHelper.js';
+import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
 import { imageValidation } from '../validation.js';
 import { format } from 'date-fns'
@@ -126,11 +126,12 @@ router.get("/reservation/list", async (req, res) => {
         const Arrayimgurl = baseImageUrl;
 
         const result = exesqlquery.map((item) => {
-            const extraImages = (item.extra_img != "" && item.extra_img != null) ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
+            const extraImages = (item.extra_img != "" && item.extra_img != null && item.extra_img != "null") ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
 
             return {
                 reser_id: item.reser_id,
                 reser_title: item.reser_title,
+                reser_code: item.reser_code,
                 reser_main_title: item.reser_main_title,
                 reser_image: firstimgurl + item.reser_image,
                 description: item.description,
@@ -161,11 +162,12 @@ router.get("/reservation/get/:id", async (req, res) => {
         const Arrayimgurl = baseImageUrl;
 
         const result = exesqlquery.map((item) => {
-            const extraImages = (item.extra_img != "" && item.extra_img != null) ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
+            const extraImages = (item.extra_img != "" && item.extra_img != null && item.extra_img != "null") ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
 
             return {
                 reser_id: item.reser_id,
                 reser_title: item.reser_title,
+                reser_code: item.reser_code,
                 reser_video: (item.reser_videos != "" && item.reser_videos != null) ? baseVideoUrl + item.reser_videos : null,
                 reser_main_title: item.reser_main_title,
                 reser_image: (item.reser_image != "" && item.reser_image != null) ? firstimgurl + item.reser_image : "",
@@ -189,7 +191,7 @@ router.get("/reservation/get/:id", async (req, res) => {
 router.post("/reservation/add", async (req, res) => {
     try {
         // console.log(req.files);
-        const { reser_title, reser_main_title, description, status } = req.body;
+        const { reser_title, reser_code, reser_main_title, description, status } = req.body;
         const reser_img = req.files && req.files.reser_img ? req.files.reser_img : null;
         const video = req.files && req.files.video ? req.files.video : null
         const extra_imgs = req.files && req.files.img ? (Array.isArray(req.files.img) ? req.files.img : [req.files.img]) : [];
@@ -210,6 +212,7 @@ router.post("/reservation/add", async (req, res) => {
             const uploadedFiles = await Promise.all(extra_imgs.map(moveImage));
             imges = JSON.stringify(uploadedFiles);
         }
+
         console.log("imges");
         console.log(imges);
 
@@ -217,8 +220,8 @@ router.post("/reservation/add", async (req, res) => {
         if (video != null && video != "") { videoUrl = await moveVideo(video); }
         const formattedDate = new Date();
         // Insert data into MySQL table
-        const insert_sql = `INSERT INTO reservation (reser_title,reser_main_title, reser_image, description, extra_img,reser_videos, status, created_at) VALUES (?, ?, ?, ?, ?,?,?,?)`;
-        const insert_sqlValues = [reser_title, reser_main_title, imageUrl, description, imges, videoUrl, status, formattedDate];
+        const insert_sql = `INSERT INTO reservation (reser_title,reser_code,reser_main_title, reser_image, description, extra_img,reser_videos, status, created_at) VALUES (?, ?,?, ?, ?, ?,?,?,?)`;
+        const insert_sqlValues = [reser_title, reser_code, reser_main_title, imageUrl, description, imges, videoUrl, status, formattedDate];
         const insert = await executeQuery(insert_sql, insert_sqlValues);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation category added Unsuccessfully!", result: [] } }); }
         return res.send({ Response: { Success: '1', message: "Reservation category added successfully!", result: [] } });
@@ -232,7 +235,7 @@ router.post("/reservation/add", async (req, res) => {
 //admin reservation update 
 router.post("/reservation/update", async (req, res) => {
     try {
-        const { id, reser_title, reser_main_title, description, status } = req.body;
+        const { id, reser_title, reser_code, reser_main_title, description, status } = req.body;
 
         const reser_img = req.files && req.files.reser_img ? req.files.reser_img : null;
         const video = req.files && req.files.video ? req.files.video : null
@@ -277,8 +280,8 @@ router.post("/reservation/update", async (req, res) => {
             videoUrl = await moveVideo(video);
         }
         const formattedDate = new Date();
-        const update_sql = `UPDATE reservation SET reser_title = ?, reser_main_title = ?, reser_image = ?, description = ?, extra_img = ?, reser_videos = ?,  status=?, updated_at = ? WHERE reser_id = ?`
-        const update_sqlValues = [reser_title, reser_main_title, imageUrl, description, imges, videoUrl, status, formattedDate, id];
+        const update_sql = `UPDATE reservation SET reser_title = ?, reser_main_title = ?, reser_code = ?, reser_image = ?, description = ?, extra_img = ?, reser_videos = ?,  status=?, updated_at = ? WHERE reser_id = ?`
+        const update_sqlValues = [reser_title, reser_main_title, reser_code, imageUrl, description, imges, videoUrl, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation category Updated successfully!", result: [] } });
@@ -361,6 +364,7 @@ router.get("/reservation/category/list", async (req, res) => {
             return {
                 cat_id: item.cat_id,
                 cat_title: item.cat_title,
+                reser_cat_code: item.reser_cat_code,
                 cat_image: (item.cat_image != "" && item.cat_image != null) ? baseImageUrl + item.cat_image : null,
                 reser_id: item.reser_id,
                 reser_title: item.reser_title,
@@ -391,6 +395,7 @@ router.get("/reservation/category/get/:id", async (req, res) => {
             return {
                 cat_id: item.cat_id,
                 cat_title: item.cat_title,
+                reser_cat_code: item.reser_cat_code,
                 cat_image: (item.cat_image != "" && item.cat_image != null) ? baseImageUrl + item.cat_image : null,
                 reser_id: item.reser_id,
                 price_range: item.price_range,
@@ -412,7 +417,7 @@ router.get("/reservation/category/get/:id", async (req, res) => {
 router.post("/reservation/category/add", async (req, res) => {
     try {
         // console.log(req.files);
-        const { cat_title, reser_id, price_range, status } = req.body;
+        const { cat_title, reser_id, reser_cat_code, price_range, status } = req.body;
         const cat_image = req.files ? req.files.cat_image : null;
 
         if (!cat_title || !price_range || !reser_id) { return res.json({ Response: { Success: '0', message: "Reservation category title and price_range are required!" } }); }
@@ -424,8 +429,8 @@ router.post("/reservation/category/add", async (req, res) => {
         console.log(imageUrl);
         const formattedDate = new Date();
 
-        const insert_sql = `INSERT INTO reservation_category (cat_title, reser_id, cat_image, price_range, status, created_at) VALUES (?, ?, ?, ?, ?,?)`;
-        const insert_sqlValues = [cat_title, reser_id, imageUrl, price_range, status, formattedDate];
+        const insert_sql = `INSERT INTO reservation_category (reser_cat_code, cat_title, reser_id, cat_image, price_range, status, created_at) VALUES (?, ?, ?,?, ?, ?,?)`;
+        const insert_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate];
         const insert = await executeQuery(insert_sql, insert_sqlValues);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation category added Unsuccessfully!", result: [] } }); }
         return res.send({ Response: { Success: '1', message: "Reservation category added successfully!", result: [] } });
@@ -439,7 +444,7 @@ router.post("/reservation/category/add", async (req, res) => {
 //admin reservation update 
 router.post("/reservation/category/update", async (req, res) => {
     try {
-        const { id, cat_title, reser_id, price_range, status } = req.body;
+        const { id, reser_cat_code, cat_title, reser_id, price_range, status } = req.body;
 
         const cat_image = req.files && req.files.cat_image ? req.files.cat_image : null;
 
@@ -456,8 +461,8 @@ router.post("/reservation/category/update", async (req, res) => {
         }
 
         const formattedDate = new Date();
-        const update_sql = `UPDATE reservation_category SET cat_title = ?, reser_id = ?, cat_image = ?, price_range = ?,  status=?, updated_at = ? WHERE cat_id = ?`
-        const update_sqlValues = [cat_title, reser_id, imageUrl, price_range, status, formattedDate, id];
+        const update_sql = `UPDATE reservation_category SET reser_cat_code=?, cat_title = ?, reser_id = ?, cat_image = ?, price_range = ?,  status=?, updated_at = ? WHERE cat_id = ?`
+        const update_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation category Updated successfully!", result: [] } });
@@ -509,7 +514,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
         const firstimgurl = baseImageUrl;
 
         const result = exesqlquery.map((item) => {
-            const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null) ? JSON.parse(item.sub_extra_img).map(imageName => firstimgurl + imageName) : [];
+            const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => firstimgurl + imageName) : [];
 
             return {
                 reser_sub_id: item.reser_sub_id,
@@ -548,9 +553,9 @@ router.get("/reservation/subcategory/get/:id", async (req, res) => {
         const Arrayimgurl = baseImageUrl;
 
         const result = exesqlquery.map((item) => {
-            const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null) ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
-            const vegImages = (item.veg_images != "" && item.veg_images != null) ? JSON.parse(item.veg_images).map(imageName => Arrayimgurl + imageName) : [];
-            const nonVegImages = (item.nonveg_images != "" && item.nonveg_images != null) ? JSON.parse(item.nonveg_images).map(imageName => Arrayimgurl + imageName) : [];
+            const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
+            const vegImages = (item.veg_images != "" && item.veg_images != null && item.veg_images != "null") ? JSON.parse(item.veg_images).map(imageName => Arrayimgurl + imageName) : [];
+            const nonVegImages = (item.nonveg_images != "" && item.nonveg_images != null && item.nonveg_images != "null") ? JSON.parse(item.nonveg_images).map(imageName => Arrayimgurl + imageName) : [];
 
             return {
                 reser_sub_id: item.reser_sub_id,
@@ -607,9 +612,9 @@ router.post("/reservation/subcategory/add", async (req, res) => {
         if (!sub_tilte || !reser_cat_id || !reser_id || !sub_img || !sub_cat_price_range) { return res.json({ Response: { Success: '0', message: "All Feilds required!" } }); }
         if (!sub_img) { return res.json({ Response: { Success: '0', message: "Reservation subcategory image is required!" } }); }
 
-        if ((reser_id == 1) && (veg_images.length <= 0 && nonveg_images.length <= 0 && veg_menus.length <= 0 && nonveg_menus.length <= 0)) {
-            return res.json({ success: '0', message: "veg, Non-veg menus and images required", });
-        }
+        // if ((reser_id == 1) && (veg_images.length <= 0 && nonveg_images.length <= 0 && veg_menus.length <= 0 && nonveg_menus.length <= 0)) {
+        //     return res.json({ success: '0', message: "veg, Non-veg menus and images required", });
+        // }
 
         await imageValidation(sub_img);
         // Move and handle main image
@@ -842,6 +847,250 @@ router.get("/category/select/:reser_id", async (req, res) => {
         return res.json(response);
     }
 })
+
+
+//admin reservation list 
+router.post("/reservation/booking/list", async (req, res) => {
+    try {
+        let reservationbookingsql = `SELECT 
+            reservation_booking.booking_id, 
+            reservation_booking.date, 
+            reservation_booking.time,
+            reservation_booking.time_slot, 
+            reservation_booking.total_people, 
+            reservation_booking.menu_type, 
+            reservation_booking.veg_or_nonveg, 
+            reservation_booking.guest_name, 
+            reservation_booking.guest_whatsapp, 
+            reservation_booking.cake, 
+            reservation_booking.cake_msg, 
+            reservation_booking.cake_weight, 
+            reservation_booking.cake_shape, 
+            reservation_booking.cakeShapePrice, 
+            reservation_booking.booking_status, 
+            reservation_booking.razorpay_payment_status, 
+            reservation_booking.razorpay_payment_amount, 
+            reservation_booking.reservation_sub_catid,
+            reservation_booking.comment,
+            reservation_booking.photoShoot, 
+            reservation_booking.photoShootPrice, 
+            reservation_booking.photoPrint, 
+            reservation_booking.photoPrintPrice, 
+            reservation_booking.flowerPrice,
+            reservation_booking.flower, 
+            reservation_booking.firePrice,
+            reservation_booking.fire,
+            reservation_booking.balloon_theme,
+            reservation_booking.is_led,
+            reservation_booking.ledName,
+            reservation_booking.led,
+            reservation_booking.ledPrice,
+            reservation_booking.is_age,
+            reservation_booking.ageName,
+            reservation_booking.age,
+            reservation_booking.agePrice,
+            reservation_booking.amount, 
+            reservation_booking.total_amount, 
+            reservation_booking.comment,
+            reservation_booking.created_at,
+            users.name as username,
+            users.email as email,
+            users.mobile as mobile,
+
+            reservation_sub_category.*,
+            reservation.reser_main_title,
+            reservation.description,
+            reservation.reser_code,
+            reservation_category.cat_title,
+            reservation_category.cat_image
+        from reservation_booking JOIN reservation_sub_category ON reservation_sub_category.reser_sub_id = reservation_booking.reservation_sub_catid
+        JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
+        JOIN reservation ON reservation.reser_id = reservation_category.reser_id
+        JOIN users ON users.id = reservation_booking.user_id
+        where reservation_sub_category.status = "Active" ORDER BY reservation_booking.date ASC`;
+
+        const executereservationbookingsql = await executeQuery(reservationbookingsql)
+
+        if (executereservationbookingsql.length > 0) {
+            const result = executereservationbookingsql.map((item) => {
+
+                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName) : [];
+                const veg_images = (item.veg_images != "" && item.veg_images != null && item.veg_images != "null") ? JSON.parse(item.veg_images).map(imageName => baseImageUrl + imageName) : [];
+                const nonveg_images = (item.nonveg_images != "" && item.nonveg_images != null && item.nonveg_images != "null") ? JSON.parse(item.nonveg_images).map(imageName => baseImageUrl + imageName) : [];
+
+                let veg_menus = (item.veg_menus && item.veg_menus != "" && item.veg_menus != null) ? Object.keys(JSON.parse(item.veg_menus))
+                    .map(key => JSON.parse(item.veg_menus)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(veg_menus);
+
+                let nonveg_menus = (item.nonveg_menus && item.nonveg_menus != "" && item.nonveg_menus != null) ? Object.keys(JSON.parse(item.nonveg_menus))
+                    .map(key => JSON.parse(item.nonveg_menus)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(nonveg_menus);
+
+                return {
+                    reser_sub_id: item.reser_sub_id,
+                    sub_tilte: item.sub_tilte,
+                    reser_id: item.reser_id,
+                    sub_img: baseImageUrl + item.sub_img,
+                    reser_id: item.reser_id,
+                    reser_cat_id: item.reser_cat_id,
+                    sub_extra_img: extraImages,
+                    veg_images: veg_images,
+                    veg_menus: veg_menus,
+                    nonveg_menus: nonveg_menus,
+                    nonveg_images: nonveg_images,
+                    sub_cat_price_range: item.sub_cat_price_range,
+                    status: item.status,
+                    created_at: item.created_at,
+                    updated_at: item.updated_at,
+
+                    reser_main_title: item.reser_main_title,
+                    reser_code: item.reser_code,
+                    description: item.description,
+                    cat_title: item.cat_title,
+                    cat_image: baseImageUrl + item.cat_image,
+
+                    // booking
+                    booking_id: "BOOKID" + item.booking_id,
+                    booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
+                    booking_time: item.time,
+                    booking_time_slot: item.time_slot,
+                    booking_total_people: item.total_people,
+                    booking_menu_type: item.menu_type,
+                    booking_veg_or_nonveg: item.veg_or_nonveg,
+                    booking_guest_name: item.guest_name,
+                    booking_guest_whatsapp: item.guest_whatsapp,
+                    booking_cake: item.cake,
+                    booking_cake_msg: item.cake_msg,
+                    booking_cake_weight: item.cake_weight,
+                    booking_cake_shape: item.cake_shape,
+                    booking_cakeShapePrice: item.cakeShapePrice,
+                    booking_status: item.booking_status,
+                    booking_payment_status: item.razorpay_payment_status,
+                    booking_payment_amount: item.razorpay_payment_amount,
+                    remarks: item.comment,
+                    amount: item.amount,
+                    total_amount: item.total_amount,
+                    photoShoot: item.photoShoot,
+                    photoShootPrice: item.photoShootPrice,
+                    photoPrint: item.photoPrint,
+                    photoPrintPrice: item.photoPrintPrice,
+                    flower: item.flower,
+                    flowerPrice: item.flowerPrice,
+
+                    firePrice: item.firePrice,
+                    fire: item.fire,
+                    balloon_theme: item.balloon_theme,
+                    is_led: item.is_led,
+                    ledName: item.ledName,
+                    led: item.led,
+                    ledPrice: item.ledPrice,
+                    is_age: item.is_age,
+                    ageName: item.ageName,
+                    age: item.age,
+                    agePrice: item.agePrice,
+
+                    remarks: item.comment,
+                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
+
+                };
+            });
+            // objfile['reservation_booking'] = result;
+            // objfile['user'] = userResult;
+
+            res.send({ Response: { Success: "1", Message: "Success", Result: result } })
+        } else {
+            res.send({ Response: { Success: "0", Message: "NO Records", Result: [] } });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+    }
+})
+
+
+//admin reservation list 
+router.get("/reservation/booking/get:booking_id", async (req, res) => {
+
+    let sql = `select reservation_booking.*, reservation_sub_category.reser_sub_id as reser_sub_id, reservation_sub_category.sub_title as sub_title, reservation_category.reser_cat_id as reser_cat_id, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_main_title, reservation.reser_title as reser_title, reservation.reser_id as reser_id from reservation_booking LEFT JOIN reservation_sub_category ON reservation_sub_category.reser_cat_id = reservation_booking.reservation_sub_catid LEFT JOIN reservation_category ON reservation_category.reser_id = reservation_booking.reservation_catid LEFT JOIN reservation ON reservation.reser_id = reservation_booking.reservation_id where reservation_booking.booking_id=${booking_id} order by reservation_booking.booking_id DESC`
+    const exesqlquery = await executeQuery(sql)
+
+    if (exesqlquery.length > 0) {
+
+        const result = exesqlquery.map((item) => {
+            return {
+                reser_sub_id: item.reser_sub_id,
+                sub_tilte: item.sub_tilte,
+                reser_cat_id: item.reser_cat_id,
+                reser_cat_title: item.cat_title,
+                reser_id: item.reser_id,
+                reser_title: item.reser_title,
+
+                reservation_booking_id: item.booking_id,
+                booking_id: "BOOKID" + item.booking_id,
+                booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
+                booking_time: item.time,
+                booking_total_people: item.total_people,
+                booking_remarks: item.remarks,
+                booking_amount: item.amount,
+                booking_total_amount: item.total_amount,
+                booking_status: item.booking_status,
+
+                booking_menu_type: item.menu_type,
+                booking_veg_or_nonveg: item.veg_or_nonveg,
+                booking_guest_name: item.guest_name,
+                booking_cake: item.cake,
+                booking_cake_msg: item.cake_msg,
+                booking_cake_weight: item.cake_weight,
+                booking_cake_shape: item.cake_shape,
+
+                booking_payment_status: item.razorpay_payment_status,
+                booking_payment_amount: item.razorpay_payment_amount,
+
+                booking_photoShoots: item.photoShoots,
+                booking_photoShootPrices: item.photoShootPrices,
+                booking_photoPrints: item.photoPrints,
+                booking_photoPrintPrices: item.photoPrintPrices,
+                booking_flowers: item.flowers,
+                booking_flowersPrices: item.flowersPrices,
+
+                booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
+                booking_updated_at: format(new Date(item.updated_at), 'yyyy-MM-dd HH:ii:ss'),
+
+            };
+        });
+        const response = { Response: { Success: "1", message: "Success", result: result } };
+        return res.json(response);
+    }
+    else {
+        const response = { Response: { Success: "0", message: "No Records!", } };
+        return res.json(response);
+    }
+})
+
+
+//admin reservation update 
+router.post("/reservation/booking/get:booking_id", async (req, res) => {
+    try {
+        const { booking_id, status, comment } = req.body;
+
+        const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`)
+        if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
+
+
+        const formattedDate = new Date();
+        const update_sql = `UPDATE reservation_booking SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
+        const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
+        const update = await executeQuery(update_sql, update_sqlValues);
+        if ((update.changedRows == 1)) {
+            return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
+        }
+        return res.send({ Response: { Success: '0', message: "Reservation sub category Updated Unsuccessfully!", result: [] } });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ Response: { Success: '0', message: error.message } });
+    }
+});
 
 
 export default router;

@@ -1,7 +1,7 @@
 import { baseImageUrl, baseVideoUrl, deleteImageUrl, deleteVideoUrl } from '../constants.js';
-import { executeQuery} from '../dbHelper.js';
+import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
-import { getUserInfo, validateEncrypt, reg  } from '../helper.js';
+import { getUserInfo, validateEncrypt, reg } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
 import con from "../db.js";
@@ -11,6 +11,11 @@ import con from "../db.js";
 import express from 'express';
 
 const router = express.Router();
+
+
+const firstimgurl = baseImageUrl;
+const Arrayimgurl = baseImageUrl;
+
 
 // Website
 router.post('/register', async (req, res) => {
@@ -134,15 +139,16 @@ router.get("/reservation/list", async (req, res) => {
             objfile['video'] = baseVideoUrl + executevideoquery[0].video_file;
         }
 
-        const firstimgurl = baseImageUrl;
-        const Arrayimgurl = baseImageUrl;
+        //const firstimgurl = baseImageUrl;
+        //const Arrayimgurl = baseImageUrl;
 
         const result = exesqlquery.map((item) => {
-            const extraImages = JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName);
+            const extraImages = (item.extra_img != "" && item.extra_img != null && item.extra_img != "null") ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
 
             return {
                 reser_id: item.reser_id,
                 reser_title: item.reser_title,
+                reser_code: item.reser_code,
                 reser_main_title: item.reser_main_title,
                 reser_image: firstimgurl + item.reser_image,
                 description: item.description,
@@ -170,7 +176,7 @@ router.get("/reservation/category/list", async (req, res) => {
     let objfile = {};
     let Arrayresposne = [];
 
-    const sql = `SELECT reservation.reser_main_title,reservation.reser_id,reservation.reser_image,reservation.reser_title,reservation.reser_videos
+    const sql = `SELECT reservation.reser_main_title,reservation.reser_id,reservation.reser_code,reservation.reser_image,reservation.reser_title,reservation.reser_videos
         FROM reservation
         JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id
         WHERE reservation.status = 'Active' AND reservation_category.status = 'Active'
@@ -184,6 +190,7 @@ router.get("/reservation/category/list", async (req, res) => {
         objfile['reser_main_title'] = executesql[0].reser_main_title;
         objfile['reser_title'] = executesql[0].reser_title;
         objfile['reser_id'] = executesql[0].reser_id;
+        objfile['reser_code'] = executesql[0].reser_code;
 
         let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id}`
         const executereservationcategorysql = await executeQuery(reservationcategorysql)
@@ -193,6 +200,7 @@ router.get("/reservation/category/list", async (req, res) => {
                 return {
                     cat_id: item.cat_id,
                     cat_title: item.cat_title,
+                    reser_cat_code: item.reser_cat_code,
                     price_range: item.price_range,
                     cat_image: baseImageUrl + item.cat_image,
                     status: item.status,
@@ -225,7 +233,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
     let objfile = {};
     let Arrayresposne = [];
 
-    const sql = `SELECT reservation.reser_main_title,reservation.reser_videos,reservation.reser_image,reservation.reser_title,reservation.reser_id,reservation_category.cat_title,reservation_category.cat_id FROM reservation JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id WHERE reservation.status = 'Active' AND reservation_category.status = 'Active' AND reservation.reser_id = ${reser_id} AND reservation_category.cat_id=${resercat_id}`
+    const sql = `SELECT reservation.reser_main_title,reservation.reser_videos,reservation.reser_image,reservation.reser_title,reservation.reser_id,reservation_category.cat_title,reservation_category.cat_id,reservation_category.reser_cat_code FROM reservation JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id WHERE reservation.status = 'Active' AND reservation_category.status = 'Active' AND reservation.reser_id = ${reser_id} AND reservation_category.cat_id=${resercat_id}`
 
     const executesql = await executeQuery(sql)
 
@@ -236,14 +244,17 @@ router.get("/reservation/subcategory/list", async (req, res) => {
         objfile['reser_title'] = executesql[0].reser_title;
         objfile['reser_id'] = executesql[0].reser_id;
         objfile['cat_id'] = executesql[0].cat_id;
+        objfile['reser_cat_code'] = executesql[0].reser_cat_code;
         objfile['reser_subtitle'] = executesql[0].cat_title;
 
         let reservationcategorysql = `select * from reservation_sub_category where status="Active" and reser_id=${reser_id} AND reser_cat_id=${resercat_id}`
         const executereservationcategorysql = await executeQuery(reservationcategorysql)
 
+        //const firstimgurl = baseImageUrl;
+        //const Arrayimgurl = baseImageUrl;
         if (executereservationcategorysql.length > 0) {
             const result = executereservationcategorysql.map((item) => {
-                const extraImages = JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName);
+                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
                 return {
                     reser_sub_id: item.reser_sub_id,
                     sub_tilte: item.sub_tilte,
@@ -307,9 +318,10 @@ router.get("/reservation/category/subcategory", async (req, res) => {
 
         if (executereservationcategorysql.length > 0) {
             const result = executereservationcategorysql.map((item) => {
-                const extraImages = JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName);
-                const veg_images = JSON.parse(item.veg_images).map(imageName => baseImageUrl + imageName);
-                const nonveg_images = JSON.parse(item.nonveg_images).map(imageName => baseImageUrl + imageName);
+                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
+                const veg_images = (item.veg_images != "" && item.veg_images != null && item.veg_images != "null") ? JSON.parse(item.veg_images).map(imageName => Arrayimgurl + imageName) : [];
+                const nonveg_images = (item.nonveg_images != "" && item.nonveg_images != null && item.nonveg_images != "null") ? JSON.parse(item.nonveg_images).map(imageName => Arrayimgurl + imageName) : [];
+
                 // console.log(JSON.parse(item.veg_menus).map(el => el != ""));
                 // console.log(JSON.parse(item.nonveg_menus));
                 // console.log(typeof JSON.parse(item.nonveg_menus));
@@ -434,27 +446,29 @@ router.post("/reservation/booking/create", async (req, res) => {
     if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
 
     let { reser_id, reser_catid, resersubcatid } = req.body;
-    let { type, date, time, peoples, guest_name, remarks } = req.body;
+    let { type, date, time, time_slot, peoples, guest_name, guest_whatsapp, remarks, balloon_theme } = req.body;
     let { menu_type, veg_or_nonveg } = req.body;
-    let { cake, cake_msg, cake_weight, cake_shape } = req.body;
-    let { photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice } = req.body;
+    let { cake, cake_msg, cake_weight, cake_shape, cakeShapePrice } = req.body;
+    let { photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice } = req.body;
+    let { ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice } = req.body;
     let { total, price } = req.body;
+
 
     if (!reser_id || !reser_catid || !resersubcatid) {
         return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
     }
 
-    if ((type === "CL" || reser_id == 1) && (!date || !time || !guest_name
+    if ((type == "CL") && (!date || !time_slot || !guest_name
         || !peoples || !menu_type || !total || !price)) {
         return res.json({ Response: { Success: "0", Message: "Please Provide Valid candle light dinner Details" } });
     }
 
-    if ((type === "BP" || reser_id == 2) && (!date || !time || !peoples || !guest_name
+    if ((type == "BP") && (!date || !time_slot || !peoples || !guest_name
         || !cake || !cake_msg || !cake_shape || !cake_weight || !total || !price)) {
         return res.json({ Response: { Success: "0", Message: "Please Provide Valid birthday party Details" } });
     }
 
-    if ((type === "TA" || reser_id == 3) && (!date || !time || !peoples || !total || !price)) {
+    if ((type == "TB") && (!date || !time || !peoples || !total || !price)) {
         return res.json({ Response: { Success: "0", Message: "Please Provide Valid table booking Details" } });
     }
 
@@ -463,12 +477,15 @@ router.post("/reservation/booking/create", async (req, res) => {
     price = parseInt(price, 10);
     total = parseInt(total, 10);
 
-    if (type != "CL" && reser_id != 1) {
+    if (type == "CL" || type == "BP") {
         photoShootPrice = parseInt(photoShootPrice, 10);
         photoPrintPrice = parseInt(photoPrintPrice, 10);
         flowerPrice = parseInt(flowerPrice, 10);
+        firePrice = parseInt(firePrice, 10);
+        ledPrice = parseInt(ledPrice, 10);
+        agePrice = parseInt(agePrice, 10);
     }
-    let bookingStatus = "Created";
+    let bookingStatus = (type == "TB") ? "Booked" : "Created";
     // ["Created","Booked"]
 
     let formatDate = new Date();
@@ -476,17 +493,15 @@ router.post("/reservation/booking/create", async (req, res) => {
     let insertQuery = "";
     let sqlValues = [];
 
-    if (type === "CL" || reser_id == 1) {
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people, menu_type, veg_or_nonveg,guest_name,cake,cake_msg,amount, total_amount,comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, menu_type, veg_or_nonveg, guest_name, cake, cake_msg, price, total, remarks, bookingStatus, formatDate];
-    } else if (type === "BP" || reser_id == 2) {
-        photoShootPrice = 0;photoPrintPrice = 0;flowerPrice = 0;
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people, cake_weight, cake_shape, guest_name,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice,amount, total_amount, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?,?, ?,?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, cake_weight, cake_shape, guest_name, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, price, total, remarks, bookingStatus, formatDate];
+    if (type == "CL") {
+        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, menu_type, veg_or_nonveg,guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice,fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice, amount, total_amount,comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?)`;
+        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, menu_type, veg_or_nonveg, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
+    } else if (type == "BP") {
+        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, cake_weight, cake_shape,cakeShapePrice, guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice,amount, total_amount, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?)`;
+        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, cake_weight, cake_shape, cakeShapePrice, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
     } else {
-        photoShootPrice = 0;photoPrintPrice = 0;flowerPrice = 0;
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, amount, total_amount, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, price, total, remarks, bookingStatus, formatDate];
+        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people,guest_name,guest_whatsapp, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, guest_name, guest_whatsapp, remarks, bookingStatus, formatDate];
     }
 
     con.query(insertQuery, sqlValues, async (error, result) => {
@@ -495,8 +510,18 @@ router.post("/reservation/booking/create", async (req, res) => {
             return res.json({ Response: { Success: "0", Message: "Booking failed" } });
         } else {
             const reservationId = result.insertId;
+            if (type == "TB") {
+                return res.json({
+                    Response: {
+                        Success: "1", Message: "Booked!",
+                        ReservationId: reservationId,
+                        reservationSubCategory: reservationSubCategory,
+                        user: userResult
+                    }
+                });
+            }
             // await mailbooking(reservationId, res)
-            let razorPayCreate = await createOrder({ amount: reservationSubCategory[0].sub_cat_price_range, receipt: userid.toString() })
+            let razorPayCreate = await createOrder({ amount: total, receipt: userid.toString() })
 
             if (!razorPayCreate.success) {
                 return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
@@ -598,13 +623,18 @@ router.post("/order/api", async (req, res) => {
         let reservationbookingsql = `SELECT 
             reservation_booking.booking_id, 
             reservation_booking.date, 
-            reservation_booking.time, 
+            reservation_booking.time,
+            reservation_booking.time_slot, 
             reservation_booking.total_people, 
             reservation_booking.menu_type, 
             reservation_booking.veg_or_nonveg, 
             reservation_booking.guest_name, 
+            reservation_booking.guest_whatsapp, 
             reservation_booking.cake, 
             reservation_booking.cake_msg, 
+            reservation_booking.cake_weight, 
+            reservation_booking.cake_shape, 
+            reservation_booking.cakeShapePrice, 
             reservation_booking.booking_status, 
             reservation_booking.razorpay_payment_status, 
             reservation_booking.razorpay_payment_amount, 
@@ -614,10 +644,21 @@ router.post("/order/api", async (req, res) => {
             reservation_booking.photoShootPrice, 
             reservation_booking.photoPrint, 
             reservation_booking.photoPrintPrice, 
-            reservation_booking.total_amount, 
             reservation_booking.flowerPrice,
             reservation_booking.flower, 
+            reservation_booking.firePrice,
+            reservation_booking.fire,
+            reservation_booking.balloon_theme,
+            reservation_booking.is_led,
+            reservation_booking.ledName,
+            reservation_booking.led,
+            reservation_booking.ledPrice,
+            reservation_booking.is_age,
+            reservation_booking.ageName,
+            reservation_booking.age,
+            reservation_booking.agePrice,
             reservation_booking.amount, 
+            reservation_booking.total_amount, 
             reservation_booking.comment,
             reservation_booking.created_at,
             users.name as username,
@@ -627,21 +668,23 @@ router.post("/order/api", async (req, res) => {
             reservation_sub_category.*,
             reservation.reser_main_title,
             reservation.description,
+            reservation.reser_code,
             reservation_category.cat_title,
             reservation_category.cat_image
         from reservation_booking JOIN reservation_sub_category ON reservation_sub_category.reser_sub_id = reservation_booking.reservation_sub_catid
         JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
         JOIN reservation ON reservation.reser_id = reservation_category.reser_id
         JOIN users ON users.id = reservation_booking.user_id
-        where reservation_sub_category.status = "Active" ORDER BY reservation_booking.created_at DESC`;
+        where reservation_sub_category.status = "Active" AND reservation_booking.user_id =${userid} ORDER BY reservation_booking.date ASC`;
 
         const executereservationbookingsql = await executeQuery(reservationbookingsql)
 
         if (executereservationbookingsql.length > 0) {
             const result = executereservationbookingsql.map((item) => {
-                const extraImages = JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName);
-                const veg_images = JSON.parse(item.veg_images).map(imageName => baseImageUrl + imageName);
-                const nonveg_images = JSON.parse(item.nonveg_images).map(imageName => baseImageUrl + imageName);
+
+                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName) : [];
+                const veg_images = (item.veg_images != "" && item.veg_images != null && item.veg_images != "null") ? JSON.parse(item.veg_images).map(imageName => baseImageUrl + imageName) : [];
+                const nonveg_images = (item.nonveg_images != "" && item.nonveg_images != null && item.nonveg_images != "null") ? JSON.parse(item.nonveg_images).map(imageName => baseImageUrl + imageName) : [];
 
                 let veg_menus = (item.veg_menus && item.veg_menus != "" && item.veg_menus != null) ? Object.keys(JSON.parse(item.veg_menus))
                     .map(key => JSON.parse(item.veg_menus)[key])           // Get values
@@ -671,6 +714,7 @@ router.post("/order/api", async (req, res) => {
                     updated_at: item.updated_at,
 
                     reser_main_title: item.reser_main_title,
+                    reser_code: item.reser_code,
                     description: item.description,
                     cat_title: item.cat_title,
                     cat_image: baseImageUrl + item.cat_image,
@@ -679,24 +723,42 @@ router.post("/order/api", async (req, res) => {
                     booking_id: "BOOKID" + item.booking_id,
                     booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
                     booking_time: item.time,
+                    booking_time_slot: item.time_slot,
                     booking_total_people: item.total_people,
                     booking_menu_type: item.menu_type,
                     booking_veg_or_nonveg: item.veg_or_nonveg,
                     booking_guest_name: item.guest_name,
+                    booking_guest_whatsapp: item.guest_whatsapp,
                     booking_cake: item.cake,
                     booking_cake_msg: item.cake_msg,
+                    booking_cake_weight: item.cake_weight,
+                    booking_cake_shape: item.cake_shape,
+                    booking_cakeShapePrice: item.cakeShapePrice,
                     booking_status: item.booking_status,
                     booking_payment_status: item.razorpay_payment_status,
                     booking_payment_amount: item.razorpay_payment_amount,
                     remarks: item.comment,
-                    price: item.amount,
-                    total_price: item.total_amount,
+                    amount: item.amount,
+                    total_amount: item.total_amount,
                     photoShoot: item.photoShoot,
                     photoShootPrice: item.photoShootPrice,
                     photoPrint: item.photoPrint,
                     photoPrintPrice: item.photoPrintPrice,
                     flower: item.flower,
                     flowerPrice: item.flowerPrice,
+
+                    firePrice: item.firePrice,
+                    fire: item.fire,
+                    balloon_theme: item.balloon_theme,
+                    is_led: item.is_led,
+                    ledName: item.ledName,
+                    led: item.led,
+                    ledPrice: item.ledPrice,
+                    is_age: item.is_age,
+                    ageName: item.ageName,
+                    age: item.age,
+                    agePrice: item.agePrice,
+
                     remarks: item.comment,
                     booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
 
