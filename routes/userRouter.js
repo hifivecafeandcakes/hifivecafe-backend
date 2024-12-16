@@ -4,11 +4,13 @@ import { encryptData, decryptData } from '../encryption.js'
 import { getUserInfo, validateEncrypt, reg } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
+
 import con from "../db.js";
 
 
 // routes/userRouter.js
 import express from 'express';
+import { sendMessage } from '../whastpp/index.js';
 
 const router = express.Router();
 
@@ -442,6 +444,9 @@ router.post("/reservation/booking/create", async (req, res) => {
     // let userid = 61008;
     console.log(userid);
 
+    console.log(req.body);
+
+
     const userResult = await executeQuery(`SELECT * FROM users WHERE id = ?`, [userid]); //check user exist in DB   
     if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
 
@@ -780,6 +785,24 @@ router.post("/order/api", async (req, res) => {
         return res.status(500).json({ success: '0', message: error.message, Result: [] });
     }
 });
+
+router.post("/send/whatsapp/message", async (req, res) => {
+    try {
+        let { sendNumbers } = req.body;
+        if (sendNumbers.length <= 0) { return res.send({ Response: { success: '0', message: "Empty numbers!", } }); }
+
+        const result = sendNumbers.map(async (item) => {
+            await sendMessage(item);
+        });
+        // console.log(result);
+
+        res.send({ Response: { Success: "1", Message: "Success", Result: result } })
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+    }
+});
+
 
 
 export default router;
