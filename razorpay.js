@@ -16,7 +16,7 @@ export async function createOrder(option) {
     const options = {
         amount: option.amount * 100, // amount in paise
         currency: 'INR',
-        receipt: option.receipt,
+        receipt: option.receipt
     };
 
     try {

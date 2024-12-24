@@ -536,11 +536,19 @@ router.post("/reservation/booking/create", async (req, res) => {
             //Update razorpay_order_id
             const formatedate = new Date()
             const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
-            con.query(sql2, [RazorpayOrder.id, formatedate], (Error, result) => {
+            con.query(sql2, [RazorpayOrder.id, formatedate], async (Error, result) => {
                 if (Error) {
                     console.log(Error)
                     return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
                 } else {
+                    let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [reservationId]);
+                    bookingInfo.sub_tilte = reservationSubCategory.sub_title;
+                    if (bookingInfo.length > 0) {
+                        await sendMessage({ cus: userResult },
+                            { booking: bookingInfo }, "booking"); //whatsapp
+                    }
+
+
                     return res.json({
                         Response: {
                             Success: "1", Message: "Booked!",
@@ -776,7 +784,6 @@ router.post("/order/api", async (req, res) => {
             });
             // objfile['reservation_booking'] = result;
             // objfile['user'] = userResult;
-
             res.send({ Response: { Success: "1", Message: "Success", Result: result } })
         } else {
             res.send({ Response: { Success: "1", Message: "NO Records", Result: [] } });
@@ -788,15 +795,13 @@ router.post("/order/api", async (req, res) => {
 
 router.post("/send/whatsapp/message", async (req, res) => {
     try {
-        let { sendNumbers } = req.body;
-        if (sendNumbers.length <= 0) { return res.send({ Response: { success: '0', message: "Empty numbers!", } }); }
-
-        const result = sendNumbers.map(async (item) => {
-            await sendMessage(item);
-        });
-        // console.log(result);
-
-        res.send({ Response: { Success: "1", Message: "Success", Result: result } })
+        let cus = { user_mobile: 919629188839, user_name: "Loganath M" };
+        let booking = { booking_id: "TESTBOOKING1", sub_title: "RED TABLE", date: "12-10-2025", time_slot: "11:00 pm to 12:30 pm", total_people: 5 };
+        await sendMessage(cus,
+            booking,
+            "booking"
+        );
+        res.send({ Response: { Success: "1", Message: "Success" } })
     } catch (error) {
         console.log(error)
         return res.status(500).json({ success: '0', message: error.message, Result: [] });

@@ -8,5 +8,5 @@ export default {
   port: PORT,
   secret_key: SECRET_KEY,
   secret_iv: SECRET_IV,
-  ecnryption_method: ECNRYPTION_METHOD,
+  ecnryption_method: ECNRYPTION_METHOD
 }
