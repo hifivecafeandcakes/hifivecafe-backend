@@ -42,3 +42,14 @@ export async function getUserInfo(v) {
         return null;
     }
 };
+
+
+export async function getStringDate(dateStr) {
+    // Convert the string to a Date object
+    const date = new Date(dateStr);
+
+    // Format the date as DD-MM-YYYY
+    const formattedDate = `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+    return formattedDate;
+
+}

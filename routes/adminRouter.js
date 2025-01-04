@@ -11,7 +11,7 @@ import express from 'express';
 const router = express.Router();
 
 
-// http://localhost:3004/admin/register?name=admin&email=admin@gmail.com&password=password&mobile=9876552369
+// http://localhost:3004/backend/admin/register?name=admin&email=admin@gmail.com&password=password&mobile=9629188839
 router.get("/register", async (req, res) => {
     try {
         let name = req.query.name;
@@ -32,22 +32,22 @@ router.get("/register", async (req, res) => {
             return res.send({ Response: { success: '0', message: "Invalid Email Format", result: [] } });
         }
 
-        const checkEmail = await executeQuery(`select * from admin_users where email = ? `, [email]);
+        const checkEmail = await executeQuery(`select * from admin_users where email = ? `, [email], req.originalUrl || req.url);
         if (checkEmail.length > 0) { return res.send({ Response: { success: '0', message: "Email Id Already Registered", result: [] } }); }
 
-        const checkName = await executeQuery(`select * from admin_users where name = ? `, [name]);
+        const checkName = await executeQuery(`select * from admin_users where name = ? `, [name], req.originalUrl || req.url);
         if (checkName.length > 0) { return res.send({ Response: { success: '0', message: "Name Already Registered", result: [] } }); }
 
-        const checkPhone = await executeQuery(`select * from admin_users where mobile = ? `, [phone_number]);
+        const checkPhone = await executeQuery(`select * from admin_users where mobile = ? `, [phone_number], req.originalUrl || req.url);
         if (checkPhone.length > 0) { return res.send({ Response: { success: '0', message: "Phone number Already Registered", result: [] } }); }
 
         password = encryptData(password.toString(), false);
-        const register = await executeQuery(`insert into admin_users(name,mobile,email,password,created_at)values(?,?,?,?,?)`, [name, phone_number, email, password, currentdate]);
+        const register = await executeQuery(`insert into admin_users(name,mobile,email,password,created_at)values(?,?,?,?,?)`, [name, phone_number, email, password, currentdate], req.originalUrl || req.url);
         if (register.length <= 0) { return res.send({ Response: { success: '0', message: "Register unsuccessfully", result: [] } }); }
 
         let result = [];
 
-        const signin = await executeQuery(`select * from admin_users where email = ? `, [email]);
+        const signin = await executeQuery(`select * from admin_users where email = ? `, [email], req.originalUrl || req.url);
         if (signin.length <= 0) { return res.send({ Response: { success: '0', message: "Register unsuccessfully", result: [] } }); }
         result.push({ email: email, admin_id: signin[0].id, name: name, mobile: phone_number });
         console.log(result);
@@ -77,13 +77,13 @@ router.post("/login/token", async (req, res) => {
         }
 
         // console.log(req)
-        const checkEmail = await executeQuery(`select * from admin_users where email = ? `, [email]);
+        const checkEmail = await executeQuery(`select * from admin_users where email = ? `, [email], req.originalUrl || req.url);
         if (checkEmail.length <= 0) { return res.send({ Response: { success: '0', message: "Email Not Found", result: [] } }); }
 
         const qry = ` SELECT * FROM admin_users WHERE email = ? AND password=?`;
 
         // console.log(req)
-        const signin = await executeQuery(`select * from admin_users where email = ? `, [email]);
+        const signin = await executeQuery(`select * from admin_users where email = ? `, [email], req.originalUrl || req.url);
         if (signin.length <= 0) { return res.send({ Response: { success: '0', message: "Email Not Found", result: [] } }); }
 
         let email1 = signin[0].email;
@@ -118,7 +118,7 @@ router.post("/login/token", async (req, res) => {
 router.get("/reservation/list", async (req, res) => {
     let sql = `select * from reservation order by reser_id ASC`
 
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -154,7 +154,7 @@ router.get("/reservation/list", async (req, res) => {
 router.get("/reservation/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -222,7 +222,7 @@ router.post("/reservation/add", async (req, res) => {
         // Insert data into MySQL table
         const insert_sql = `INSERT INTO reservation (reser_title,reser_code,reser_main_title, reser_image, description, extra_img,reser_videos, status, created_at) VALUES (?, ?,?, ?, ?, ?,?,?,?)`;
         const insert_sqlValues = [reser_title, reser_code, reser_main_title, imageUrl, description, imges, videoUrl, status, formattedDate];
-        const insert = await executeQuery(insert_sql, insert_sqlValues);
+        const insert = await executeQuery(insert_sql, insert_sqlValues, req.originalUrl || req.url);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation category added Unsuccessfully!", result: [] } }); }
         return res.send({ Response: { Success: '1', message: "Reservation category added successfully!", result: [] } });
     } catch (error) {
@@ -244,7 +244,7 @@ router.post("/reservation/update", async (req, res) => {
         let deleteImgs = (req.body.deleteImgs) ? (typeof req.body.deleteImgs === 'string') ? [req.body.deleteImgs] : req.body.deleteImgs : [];
         let deleteVideo = (req.body.deleteVideo) ? (typeof req.body.deleteVideo === 'string') ? [req.body.deleteVideo] : req.body.deleteVideo : [];
 
-        const res_rec = await executeQuery(`select * from reservation where reser_id=${id}`)
+        const res_rec = await executeQuery(`select * from reservation where reser_id=${id}`, [], req.originalUrl || req.url)
         if (res_rec.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Record Not Found" } }); }
         // Validate required fields
         if (!reser_title || !reser_main_title) { return res.json({ Response: { Success: '0', message: "Reservation title and main title are required!" } }); }
@@ -282,7 +282,7 @@ router.post("/reservation/update", async (req, res) => {
         const formattedDate = new Date();
         const update_sql = `UPDATE reservation SET reser_title = ?, reser_main_title = ?, reser_code = ?, reser_image = ?, description = ?, extra_img = ?, reser_videos = ?,  status=?, updated_at = ? WHERE reser_id = ?`
         const update_sqlValues = [reser_title, reser_main_title, reser_code, imageUrl, description, imges, videoUrl, status, formattedDate, id];
-        const update = await executeQuery(update_sql, update_sqlValues);
+        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation category Updated successfully!", result: [] } });
         }
@@ -296,7 +296,7 @@ router.post("/reservation/update", async (req, res) => {
 router.get("/reservation/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
-    const deletingRecord = await executeQuery(sql)
+    const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
     if (deletingRecord.length <= 0) {
         let response = { Response: { Success: "0", message: "No Records found!", result: [] } };
         return res.json(response);
@@ -325,7 +325,7 @@ router.get("/reservation/delete/:id", async (req, res) => {
         await deleteVideoFile("reservation", "reser_id", id, "reser_videos");
     }
 
-    const deleting = await executeQuery(`delete from reservation where reser_id=${id}`)
+    const deleting = await executeQuery(`delete from reservation where reser_id=${id}`, [], req.originalUrl || req.url)
     // console.log(deleting);
     if (deleting?.affectedRows == 1) {
         return res.json({ Response: { Success: "1", message: "Success" } });
@@ -335,7 +335,7 @@ router.get("/reservation/delete/:id", async (req, res) => {
 })
 
 router.get("/reservation/select", async (req, res) => {
-    const exesqlquery = await executeQuery(`select * from reservation where status="Active" order by reser_id ASC`)
+    const exesqlquery = await executeQuery(`select * from reservation where status="Active" order by reser_id ASC`, [], req.originalUrl || req.url)
     let result = [];
     if (exesqlquery.length > 0) {
         exesqlquery.map((item) => {
@@ -355,7 +355,7 @@ router.get("/reservation/select", async (req, res) => {
 router.get("/reservation/category/list", async (req, res) => {
     let sql = `select reservation_category.*, reservation.reser_main_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_category.cat_id ASC`
 
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -387,7 +387,7 @@ router.get("/reservation/category/list", async (req, res) => {
 router.get("/reservation/category/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select reservation_category.*, reservation.reser_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reservation_category.cat_id=${id}`
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -431,7 +431,7 @@ router.post("/reservation/category/add", async (req, res) => {
 
         const insert_sql = `INSERT INTO reservation_category (reser_cat_code, cat_title, reser_id, cat_image, price_range, status, created_at) VALUES (?, ?, ?,?, ?, ?,?)`;
         const insert_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate];
-        const insert = await executeQuery(insert_sql, insert_sqlValues);
+        const insert = await executeQuery(insert_sql, insert_sqlValues, req.originalUrl || req.url);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation category added Unsuccessfully!", result: [] } }); }
         return res.send({ Response: { Success: '1', message: "Reservation category added successfully!", result: [] } });
     } catch (error) {
@@ -448,7 +448,7 @@ router.post("/reservation/category/update", async (req, res) => {
 
         const cat_image = req.files && req.files.cat_image ? req.files.cat_image : null;
 
-        const res_rec = await executeQuery(`select * from reservation_category where cat_id=${id}`)
+        const res_rec = await executeQuery(`select * from reservation_category where cat_id=${id}`, [], req.originalUrl || req.url)
         if (res_rec.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation category Record Not Found" } }); }
         // Validate required fields
         if (!cat_title || !price_range) { return res.json({ Response: { Success: '0', message: "Reservation category title and price_range are required!" } }); }
@@ -463,7 +463,7 @@ router.post("/reservation/category/update", async (req, res) => {
         const formattedDate = new Date();
         const update_sql = `UPDATE reservation_category SET reser_cat_code=?, cat_title = ?, reser_id = ?, cat_image = ?, price_range = ?,  status=?, updated_at = ? WHERE cat_id = ?`
         const update_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate, id];
-        const update = await executeQuery(update_sql, update_sqlValues);
+        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation category Updated successfully!", result: [] } });
         }
@@ -477,7 +477,7 @@ router.post("/reservation/category/update", async (req, res) => {
 router.get("/reservation/category/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation_category where cat_id=${id}`
-    const deletingRecord = await executeQuery(sql)
+    const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
     if (deletingRecord.length <= 0) {
         let response = { Response: { Success: "0", message: "No Records found!", result: [] } };
         return res.json(response);
@@ -491,7 +491,7 @@ router.get("/reservation/category/delete/:id", async (req, res) => {
         await deleteImage("reservation_category", "cat_id", id, "cat_image");
     }
 
-    const deleting = await executeQuery(`delete from reservation_category where cat_id=${id}`)
+    const deleting = await executeQuery(`delete from reservation_category where cat_id=${id}`, [], req.originalUrl || req.url)
     // console.log(deleting);
     if (deleting?.affectedRows == 1) {
         return res.json({ Response: { Success: "1", message: "Success" } });
@@ -507,7 +507,7 @@ router.get("/reservation/category/delete/:id", async (req, res) => {
 router.get("/reservation/subcategory/list", async (req, res) => {
 
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.cat_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_sub_category.reser_sub_id ASC`
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql,[], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -545,7 +545,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
 router.get("/reservation/subcategory/get/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.reser_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reser_sub_id=${id}`
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql,[], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -662,7 +662,7 @@ router.post("/reservation/subcategory/add", async (req, res) => {
         const insert_sql = `INSERT INTO reservation_sub_category (sub_tilte, reser_cat_id, reser_id, sub_img,sub_extra_img,veg_images,nonveg_images, sub_cat_price_range,veg_menus,nonveg_menus,cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices,status,created_at) VALUES (?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
         const insert_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate];
 
-        const insert = await executeQuery(insert_sql, insert_sqlValues);
+        const insert = await executeQuery(insert_sql, insert_sqlValues, req.originalUrl || req.url);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation Sub category added Unsuccessfully!", result: [] } }); }
         return res.send({ Response: { Success: '1', message: "Reservation Sub category added successfully!", result: [] } });
     } catch (error) {
@@ -686,7 +686,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
         let deleteVegImages = (req.body.deleteVegImages) ? (typeof req.body.deleteVegImages === 'string') ? [req.body.deleteVegImages] : req.body.deleteVegImages : [];
         let deleteNonVegImages = (req.body.deleteNonVegImages) ? (typeof req.body.deleteNonVegImages === 'string') ? [req.body.deleteNonVegImages] : req.body.deleteNonVegImages : [];
 
-        const res_rec = await executeQuery(`select * from reservation_sub_category where reser_sub_id=${id}`)
+        const res_rec = await executeQuery(`select * from reservation_sub_category where reser_sub_id=${id}`,[], req.originalUrl || req.url)
         if (res_rec.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation sub category Record Not Found" } }); }
         // Validate required fields
         if (!sub_tilte || !reser_cat_id || !reser_id || !sub_cat_price_range) { return res.json({ Response: { Success: '0', message: "All Feilds required!" } }); }
@@ -762,7 +762,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
         const formattedDate = new Date();
         const update_sql = `UPDATE reservation_sub_category SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
         const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
-        const update = await executeQuery(update_sql, update_sqlValues);
+        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
         }
@@ -776,7 +776,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
 router.get("/reservation/subcategory/delete/:id", async (req, res) => {
     const { id } = req.params;
     let sql = `select * from reservation_sub_category where reser_sub_id=${id}`
-    const deletingRecord = await executeQuery(sql)
+    const deletingRecord = await executeQuery(sql,[], req.originalUrl || req.url)
     if (deletingRecord.length <= 0) {
         let response = { Response: { Success: "0", message: "No Records found!", result: [] } };
         return res.json(response);
@@ -815,7 +815,7 @@ router.get("/reservation/subcategory/delete/:id", async (req, res) => {
         }
     }
 
-    const deleting = await executeQuery(`delete from reservation_sub_category where reser_sub_id=${id}`)
+    const deleting = await executeQuery(`delete from reservation_sub_category where reser_sub_id=${id}`,[], req.originalUrl || req.url)
     // console.log(deleting);
     if (deleting?.affectedRows == 1) {
         return res.json({ Response: { Success: "1", message: "Success" } });
@@ -833,7 +833,7 @@ router.get("/category/select/:reser_id", async (req, res) => {
         sql = `select * from reservation_category where status="Active" and reser_id=${reser_id} order by cat_id ASC`;
     }
 
-    const exesqlquery = await executeQuery(sql)
+    const exesqlquery = await executeQuery(sql,[], req.originalUrl || req.url)
     let result = [];
     if (exesqlquery.length > 0) {
         exesqlquery.map((item) => {
@@ -909,7 +909,7 @@ router.post("/reservation/booking/list", async (req, res) => {
         JOIN users ON users.id = reservation_booking.user_id
         where reservation_sub_category.status = "Active" ORDER BY reservation_booking.date ASC`;
 
-        const executereservationbookingsql = await executeQuery(reservationbookingsql)
+        const executereservationbookingsql = await executeQuery(reservationbookingsql,[], req.originalUrl || req.url)
 
         if (executereservationbookingsql.length > 0) {
             const result = executereservationbookingsql.map((item) => {
@@ -1012,8 +1012,8 @@ router.post("/reservation/booking/list", async (req, res) => {
 //admin reservation list 
 router.get("/reservation/booking/get:booking_id", async (req, res) => {
 
-    let sql = `select reservation_booking.*, reservation_sub_category.reser_sub_id as reser_sub_id, reservation_sub_category.sub_title as sub_title, reservation_category.reser_cat_id as reser_cat_id, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_main_title, reservation.reser_title as reser_title, reservation.reser_id as reser_id from reservation_booking LEFT JOIN reservation_sub_category ON reservation_sub_category.reser_cat_id = reservation_booking.reservation_sub_catid LEFT JOIN reservation_category ON reservation_category.reser_id = reservation_booking.reservation_catid LEFT JOIN reservation ON reservation.reser_id = reservation_booking.reservation_id where reservation_booking.booking_id=${booking_id} order by reservation_booking.booking_id DESC`
-    const exesqlquery = await executeQuery(sql)
+    let sql = `select reservation_booking.*, reservation_sub_category.reser_sub_id as reser_sub_id, reservation_sub_category.sub_tilte as sub_tilte, reservation_category.reser_cat_id as reser_cat_id, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_main_title, reservation.reser_title as reser_title, reservation.reser_id as reser_id from reservation_booking LEFT JOIN reservation_sub_category ON reservation_sub_category.reser_cat_id = reservation_booking.reservation_sub_catid LEFT JOIN reservation_category ON reservation_category.reser_id = reservation_booking.reservation_catid LEFT JOIN reservation ON reservation.reser_id = reservation_booking.reservation_id where reservation_booking.booking_id=${booking_id} order by reservation_booking.booking_id DESC`
+    const exesqlquery = await executeQuery(sql,[], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
@@ -1074,14 +1074,14 @@ router.post("/reservation/booking/get:booking_id", async (req, res) => {
     try {
         const { booking_id, status, comment } = req.body;
 
-        const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`)
+        const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`,[], req.originalUrl || req.url)
         if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
 
 
         const formattedDate = new Date();
         const update_sql = `UPDATE reservation_booking SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
         const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
-        const update = await executeQuery(update_sql, update_sqlValues);
+        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
         }

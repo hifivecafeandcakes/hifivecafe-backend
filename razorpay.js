@@ -1,5 +1,6 @@
 import Razorpay from 'razorpay'
 import dotenv from 'dotenv'
+import logger from './logger.js';
 dotenv.config()
 
 
@@ -22,8 +23,23 @@ export async function createOrder(option) {
     try {
         const order = await razorpay.orders.create(options);
         console.log('order:', order);
+        logger.success(`Start RazorPay:`);
+        logger.success(`order: ${JSON.stringify(order)}`);
+        logger.success(`End RazorPay:`);
+
         return { success: true, order: order };
     } catch (error) {
+
+        logger.error(`Start RazorPay:`);
+        logger.error(`Error Message: ${error.message}`);
+        logger.error(`options: ${JSON.stringify(options)}`);
+
+        let stackLines = error.stack?.split('\n') || [];
+        let errorLine = stackLines[1]?.trim();
+        if (errorLine) {
+            logger.error(`Error occurred at: ${errorLine}`);
+        }
+        logger.error(`End RazorPay: `);
         console.error('Error creating order:', error);
         return { success: false, order: {} };
     }
@@ -34,8 +50,21 @@ export async function fetchPaymentDetails(paymentId) {
     try {
         const paymentDetails = await razorpay.payments.fetch(paymentId);
         console.log(paymentDetails);
+        logger.success(`Start RazorPay fetchPaymentDetails:`);
+        logger.success(`paymentDetails: ${JSON.stringify(paymentDetails)}`);
+        logger.success(`End RazorPay fetchPaymentDetails:`);
         return paymentDetails;
     } catch (error) {
+        logger.error(`Start RazorPay fetchPaymentDetails:`);
+        logger.error(`Error Message: ${error.message}`);
+        logger.error(`paymentId: ${paymentId}`);
+
+        let stackLines = error.stack?.split('\n') || [];
+        let errorLine = stackLines[1]?.trim();
+        if (errorLine) {
+            logger.error(`Error occurred at: ${errorLine}`);
+        }
+        logger.error(`End RazorPay fetchPaymentDetails: `);
         console.error('Error fetching payment details:', error);
         return error;
     }

@@ -1,23 +1,21 @@
 import { baseImageUrl, baseVideoUrl, deleteImageUrl, deleteVideoUrl } from '../constants.js';
 import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
-import { getUserInfo, validateEncrypt, reg } from '../helper.js';
+import { getUserInfo, validateEncrypt, reg, getStringDate } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
 
 import con from "../db.js";
 
-
 // routes/userRouter.js
 import express from 'express';
 import { sendMessage } from '../whastpp/index.js';
+import logger from '../logger.js';
 
 const router = express.Router();
 
-
 const firstimgurl = baseImageUrl;
 const Arrayimgurl = baseImageUrl;
-
 
 // Website
 router.post('/register', async (req, res) => {
@@ -29,33 +27,33 @@ router.post('/register', async (req, res) => {
         const currentdate = new Date();
 
         if (name == "" || password == "" || email == "" || phone_number == "") {
-            return res.send({ Response: { success: '0', message: "Please fill all fields", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Please fill all fields", result: [] } });
         }
 
         if ((await reg(/^(?:(?:\+|0{0,2})91(\s*|[\-])?|[0]?)?([6789]\d{2}([ -]?)\d{3}([ -]?)\d{4})$/, phone_number))) {
-            return res.send({ Response: { success: '0', message: "Invalid Phone number", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Invalid Phone number", result: [] } });
         }
 
         if ((await reg(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, email))) {
-            return res.send({ Response: { success: '0', message: "Invalid Email Format", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Invalid Email Format", result: [] } });
         }
 
 
-        const checkEmail = await executeQuery(`select * from users where email = ? `, [email]);
-        if (checkEmail.length > 0) { return res.send({ Response: { success: '0', message: "Email Id Already Registered", result: [] } }); }
+        const checkEmail = await executeQuery(`select * from users where email = ? `, [email], req.originalUrl || req.url);
+        if (checkEmail.length > 0) { return res.send({ Response: { Success: '0', Message: "Email Id Already Registered", result: [] } }); }
 
-        const checkName = await executeQuery(`select * from users where name = ? `, [name]);
-        if (checkName.length > 0) { return res.send({ Response: { success: '0', message: "Name Already Registered", result: [] } }); }
+        const checkName = await executeQuery(`select * from users where name = ? `, [name], req.originalUrl || req.url);
+        if (checkName.length > 0) { return res.send({ Response: { Success: '0', Message: "Name Already Registered", result: [] } }); }
 
-        const checkPhone = await executeQuery(`select * from users where mobile = ? `, [phone_number]);
-        if (checkPhone.length > 0) { return res.send({ Response: { success: '0', message: "Phone number Already Registered", result: [] } }); }
+        const checkPhone = await executeQuery(`select * from users where mobile = ? `, [phone_number], req.originalUrl || req.url);
+        if (checkPhone.length > 0) { return res.send({ Response: { Success: '0', Message: "Phone number Already Registered", result: [] } }); }
 
         password = encryptData(password.toString(), false);
-        const register = await executeQuery(`insert into users(name,mobile,email,password,created_at)values(?,?,?,?,?)`, [name, phone_number, email, password, currentdate]);
-        if (register.length <= 0) { return res.send({ Response: { success: '0', message: "Register unsuccessfully", result: [] } }); }
+        const register = await executeQuery(`insert into users(name,mobile,email,password,created_at)values(?,?,?,?,?)`, [name, phone_number, email, password, currentdate], req.originalUrl || req.url);
+        if (register.length <= 0) { return res.send({ Response: { Success: '0', Message: "Register unsuccessfully", result: [] } }); }
 
-        const signin = await executeQuery(`select * from users where email = ? `, [email]);
-        if (signin.length <= 0) { return res.send({ Response: { success: '0', message: "Register unsuccessfully", result: [] } }); }
+        const signin = await executeQuery(`select * from users where email = ? `, [email], req.originalUrl || req.url);
+        if (signin.length <= 0) { return res.send({ Response: { Success: '0', Message: "Register unsuccessfully", result: [] } }); }
 
         let email1 = signin[0].email;
         let result = [];
@@ -64,11 +62,15 @@ router.post('/register', async (req, res) => {
 
         result.push({ email: email1, user_id: encryptedData, name: signin[0].name, mobile: signin[0].mobile });
         console.log(result);
-        return res.send({ Response: { success: '1', message: "Register and Logged in Successfully", result: result } });
+        logger.success(`Route: ${req.originalUrl || req.url}, ID: ${signin[0].id}, Email: ${email1}, Mobile: ${signin[0].mobile}`);
+        return res.send({ Response: { Success: '1', Message: "Register and Logged in Successfully", result: result } });
     }
     catch (error) {
         console.log(error);
-        return res.status(500).json({ success: '0', message: error.message, result: [] });
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, result: [] });
     }
 })
 
@@ -80,16 +82,16 @@ router.post("/signin", async (req, res) => {
         let password = req.body.password;
 
         if (password == "" || email == "") {
-            return res.send({ Response: { success: '0', message: "Please fill all fields", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Please fill all fields", result: [] } });
         }
 
         if ((await reg(/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, email))) {
-            return res.send({ Response: { success: '0', message: "Invalid Email Format", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Invalid Email Format", result: [] } });
         }
 
         // console.log(req)
-        const signin = await executeQuery(`select * from users where email = ? `, [email]);
-        if (signin.length <= 0) { return res.send({ Response: { success: '0', message: "Email Not Found", result: [] } }); }
+        const signin = await executeQuery(`select * from users where email = ? `, [email], req.originalUrl || req.url);
+        if (signin.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email Not Found", result: [] } }); }
 
 
         let email1 = signin[0].email;
@@ -106,185 +108,221 @@ router.post("/signin", async (req, res) => {
             // console.log(data);
 
             result.push({ email: email1, user_id: encryptedData, name: signin[0].name, mobile: signin[0].mobile });
+            logger.success(`Route: ${req.originalUrl || req.url}, ID: ${signin[0].id}, Email: ${email1}`);
 
-            return res.send({ Response: { success: '1', message: "Logged in Successfully", result: result } });
+            return res.send({ Response: { Success: '1', Message: "Logged in Successfully", result: result } });
         }
         else {
-            return res.send({ Response: { success: '0', message: "Email or Password Not Registered", result: [] } });
+            return res.send({ Response: { Success: '0', Message: "Email or Password Not Registered", result: [] } });
         }
     }
     catch (error) {
         console.log(error);
-        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 
 })
 
 
 router.get("/reservation/list", async (req, res) => {
-    const reser_id = req.query.reser_id
-    let sql;
-    let objfile = {};
-    let Arrayresposne = [];
-    if (!reser_id) {
-        sql = `select * from reservation where status="Active"`
-    } else {
-        sql = `select * from reservation where status="Active" and reser_id=${reser_id}`
-    }
-    const exesqlquery = await executeQuery(sql)
-
-    if (exesqlquery.length > 0) {
-
-        const videosql = `select * from video where video_status="1" and type="RESERVATION"`
-        const executevideoquery = await executeQuery(videosql)
-        if (executevideoquery.length > 0) {
-            objfile['video'] = baseVideoUrl + executevideoquery[0].video_file;
+    try {
+        const reser_id = req.query.reser_id
+        let sql;
+        let objfile = {};
+        let Arrayresposne = [];
+        if (!reser_id) {
+            sql = `select * from reservation where status="Active"`
+        } else {
+            sql = `select * from reservation where status="Active" and reser_id=${reser_id}`
         }
+        const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
-        //const firstimgurl = baseImageUrl;
-        //const Arrayimgurl = baseImageUrl;
+        if (exesqlquery.length > 0) {
 
-        const result = exesqlquery.map((item) => {
-            const extraImages = (item.extra_img != "" && item.extra_img != null && item.extra_img != "null") ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
+            const videosql = `select * from video where video_status="1" and type="RESERVATION"`
+            const executevideoquery = await executeQuery(videosql, [], req.originalUrl || req.url)
+            if (executevideoquery.length > 0) {
+                objfile['video'] = baseVideoUrl + executevideoquery[0].video_file;
+            }
 
-            return {
-                reser_id: item.reser_id,
-                reser_title: item.reser_title,
-                reser_code: item.reser_code,
-                reser_main_title: item.reser_main_title,
-                reser_image: firstimgurl + item.reser_image,
-                description: item.description,
-                extra_img: extraImages,
-                status: item.status,
-                created_at: item.created_at,
-                updated_at: item.updated_at,
-            };
-        });
+            //const firstimgurl = baseImageUrl;
+            //const Arrayimgurl = baseImageUrl;
 
-        const response = { Response: { Success: "1", message: "Success", result: result } };
-        return res.json(response);
-    }
-    else {
-        const response = { Response: { Success: "0", message: "No Records!", } };
-        return res.json(response);
+            const result = exesqlquery.map((item) => {
+                const extraImages = (item.extra_img != "" && item.extra_img != null && item.extra_img != "null") ? JSON.parse(item.extra_img).map(imageName => Arrayimgurl + imageName) : [];
+
+                return {
+                    reser_id: item.reser_id,
+                    reser_title: item.reser_title,
+                    reser_code: item.reser_code,
+                    reser_main_title: item.reser_main_title,
+                    reser_image: firstimgurl + item.reser_image,
+                    description: item.description,
+                    extra_img: extraImages,
+                    status: item.status,
+                    created_at: item.created_at,
+                    updated_at: item.updated_at,
+                };
+            });
+            logger.success(`Route: ${req.originalUrl || req.url}`);
+
+            const response = { Response: { Success: "1", Message: "Success", result: result } };
+            return res.json(response);
+        }
+        else {
+            logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+            const response = { Response: { Success: "0", Message: "No Records!", } };
+            return res.json(response);
+        }
+    } catch (error) {
+        console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 })
 
 
 router.get("/reservation/category/list", async (req, res) => {
+    try {
+        const reser_id = req.query.reser_id;
 
-    const reser_id = req.query.reser_id;
+        let objfile = {};
+        let Arrayresposne = [];
 
-    let objfile = {};
-    let Arrayresposne = [];
-
-    const sql = `SELECT reservation.reser_main_title,reservation.reser_id,reservation.reser_code,reservation.reser_image,reservation.reser_title,reservation.reser_videos
+        const sql = `SELECT reservation.reser_main_title,reservation.reser_id,reservation.reser_code,reservation.reser_image,reservation.reser_title,reservation.description,reservation.reser_videos
         FROM reservation
         JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id
         WHERE reservation.status = 'Active' AND reservation_category.status = 'Active'
         AND reservation.reser_id = ${reser_id}`
 
-    const executesql = await executeQuery(sql)
+        const executesql = await executeQuery(sql, [], req.originalUrl || req.url)
 
-    if (executesql.length > 0) {
-        objfile['video'] = baseVideoUrl + executesql[0].videos;
-        objfile['reser_img'] = baseImageUrl + executesql[0].reser_image;
-        objfile['reser_main_title'] = executesql[0].reser_main_title;
-        objfile['reser_title'] = executesql[0].reser_title;
-        objfile['reser_id'] = executesql[0].reser_id;
-        objfile['reser_code'] = executesql[0].reser_code;
+        if (executesql.length > 0) {
+            objfile['video'] = baseVideoUrl + executesql[0].videos;
+            objfile['reser_img'] = baseImageUrl + executesql[0].reser_image;
+            objfile['reser_main_title'] = executesql[0].reser_main_title;
+            objfile['reser_title'] = executesql[0].reser_title;
+            objfile['description'] = executesql[0].description;
+            objfile['reser_id'] = executesql[0].reser_id;
+            objfile['reser_code'] = executesql[0].reser_code;
+            
 
-        let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id}`
-        const executereservationcategorysql = await executeQuery(reservationcategorysql)
+            let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id}`
+            const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
 
-        if (executereservationcategorysql.length > 0) {
-            const result = executereservationcategorysql.map((item) => {
-                return {
-                    cat_id: item.cat_id,
-                    cat_title: item.cat_title,
-                    reser_cat_code: item.reser_cat_code,
-                    price_range: item.price_range,
-                    cat_image: baseImageUrl + item.cat_image,
-                    status: item.status,
-                    created_at: item.created_at,
-                    updated_at: item.updated_at,
-                };
-            });
-            objfile['reservation_category_list'] = result;
-            Arrayresposne.push(objfile)
-            const response = { Response: { Success: "1", message: "Success", result: Arrayresposne } }
-            res.send(response)
+            if (executereservationcategorysql.length > 0) {
+                const result = executereservationcategorysql.map((item) => {
+                    return {
+                        cat_id: item.cat_id,
+                        cat_title: item.cat_title,
+                        reser_cat_code: item.reser_cat_code,
+                        price_range: item.price_range,
+                        cat_image: baseImageUrl + item.cat_image,
+                        status: item.status,
+                        created_at: item.created_at,
+                        updated_at: item.updated_at,
+                    };
+                });
+                objfile['reservation_category_list'] = result;
+                Arrayresposne.push(objfile)
+                logger.success(`Route: ${req.originalUrl || req.url}`);
+                const response = { Response: { Success: "1", Message: "Success", result: Arrayresposne } }
+                res.send(response)
 
-        } else {
-            const response = { Response: { Success: "0", message: "No Records!", } };
+            } else {
+                logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+                const response = { Response: { Success: "0", Message: "No Records!", } };
+                return res.json(response);
+            }
+        }
+        else {
+            logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+            const response = { Response: { Success: "0", Message: "No Records!", } };
             return res.json(response);
         }
-    }
-    else {
-        const response = { Response: { Success: "0", message: "No Records!", } };
-        return res.json(response);
+    } catch (error) {
+        console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 })
 
 
 router.get("/reservation/subcategory/list", async (req, res) => {
+    try {
+        const reser_id = req.query.reser_id;
+        const resercat_id = req.query.resercat_id;
 
-    const reser_id = req.query.reser_id;
-    const resercat_id = req.query.resercat_id;
+        let objfile = {};
+        let Arrayresposne = [];
 
-    let objfile = {};
-    let Arrayresposne = [];
+        const sql = `SELECT reservation.reser_main_title,reservation.reser_videos,reservation.reser_image,reservation.reser_title,reservation.reser_id,reservation_category.cat_title,reservation_category.cat_id,reservation_category.reser_cat_code FROM reservation JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id WHERE reservation.status = 'Active' AND reservation_category.status = 'Active' AND reservation.reser_id = ${reser_id} AND reservation_category.cat_id=${resercat_id}`
 
-    const sql = `SELECT reservation.reser_main_title,reservation.reser_videos,reservation.reser_image,reservation.reser_title,reservation.reser_id,reservation_category.cat_title,reservation_category.cat_id,reservation_category.reser_cat_code FROM reservation JOIN reservation_category ON reservation.reser_id = reservation_category.reser_id WHERE reservation.status = 'Active' AND reservation_category.status = 'Active' AND reservation.reser_id = ${reser_id} AND reservation_category.cat_id=${resercat_id}`
+        const executesql = await executeQuery(sql, [], req.originalUrl || req.url)
 
-    const executesql = await executeQuery(sql)
+        if (executesql.length > 0) {
+            objfile['video'] = baseVideoUrl + executesql[0].reser_videos;
+            objfile['reser_img'] = baseImageUrl + executesql[0].reser_image;
+            objfile['reser_main_title'] = executesql[0].reser_main_title;
+            objfile['reser_title'] = executesql[0].reser_title;
+            objfile['reser_id'] = executesql[0].reser_id;
+            objfile['cat_id'] = executesql[0].cat_id;
+            objfile['reser_cat_code'] = executesql[0].reser_cat_code;
+            objfile['reser_subtitle'] = executesql[0].cat_title;
 
-    if (executesql.length > 0) {
-        objfile['video'] = baseVideoUrl + executesql[0].reser_videos;
-        objfile['reser_img'] = baseImageUrl + executesql[0].reser_image;
-        objfile['reser_main_title'] = executesql[0].reser_main_title;
-        objfile['reser_title'] = executesql[0].reser_title;
-        objfile['reser_id'] = executesql[0].reser_id;
-        objfile['cat_id'] = executesql[0].cat_id;
-        objfile['reser_cat_code'] = executesql[0].reser_cat_code;
-        objfile['reser_subtitle'] = executesql[0].cat_title;
+            let reservationcategorysql = `select * from reservation_sub_category where status="Active" and reser_id=${reser_id} AND reser_cat_id=${resercat_id}`
+            const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
 
-        let reservationcategorysql = `select * from reservation_sub_category where status="Active" and reser_id=${reser_id} AND reser_cat_id=${resercat_id}`
-        const executereservationcategorysql = await executeQuery(reservationcategorysql)
+            //const firstimgurl = baseImageUrl;
+            //const Arrayimgurl = baseImageUrl;
+            if (executereservationcategorysql.length > 0) {
+                const result = executereservationcategorysql.map((item) => {
+                    const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
+                    return {
+                        reser_sub_id: item.reser_sub_id,
+                        sub_tilte: item.sub_tilte,
+                        reser_id: item.reser_id,
+                        sub_img: baseImageUrl + item.sub_img,
+                        reser_id: item.reser_id,
+                        reser_cat_id: item.reser_cat_id,
+                        sub_extra_img: extraImages,
+                        sub_cat_price_range: item.sub_cat_price_range,
+                        status: item.status,
+                        created_at: item.created_at,
+                        updated_at: item.updated_at,
+                    };
+                });
+                objfile['reservation_subcategory_list'] = result;
+                Arrayresposne.push(objfile)
+                logger.success(`Route: ${req.originalUrl || req.url}`);
 
-        //const firstimgurl = baseImageUrl;
-        //const Arrayimgurl = baseImageUrl;
-        if (executereservationcategorysql.length > 0) {
-            const result = executereservationcategorysql.map((item) => {
-                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => Arrayimgurl + imageName) : [];
-                return {
-                    reser_sub_id: item.reser_sub_id,
-                    sub_tilte: item.sub_tilte,
-                    reser_id: item.reser_id,
-                    sub_img: baseImageUrl + item.sub_img,
-                    reser_id: item.reser_id,
-                    reser_cat_id: item.reser_cat_id,
-                    sub_extra_img: extraImages,
-                    sub_cat_price_range: item.sub_cat_price_range,
-                    status: item.status,
-                    created_at: item.created_at,
-                    updated_at: item.updated_at,
-                };
-            });
-            objfile['reservation_subcategory_list'] = result;
-            Arrayresposne.push(objfile)
+                const response = { Response: { Success: "1", Message: "Success", result: Arrayresposne } }
+                res.send(response)
 
-            const response = { Response: { Success: "1", message: "Success", result: Arrayresposne } }
-            res.send(response)
-
-        } else {
-            const response = { Response: { Success: "0", message: "No Records!", } };
+            } else {
+                logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+                const response = { Response: { Success: "0", Message: "No Records!", } };
+                return res.json(response);
+            }
+        }
+        else {
+            logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+            const response = { Response: { Success: "0", Message: "No Records!", } };
             return res.json(response);
         }
-    }
-    else {
-        const response = { Response: { Success: "0", message: "No Records!", } };
-        return res.json(response);
+    } catch (error) {
+        console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 })
 
@@ -292,6 +330,20 @@ router.get("/reservation/subcategory/list", async (req, res) => {
 
 router.get("/reservation/category/subcategory", async (req, res) => {
     try {
+        let userid = req.query.user_id;
+        if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
+        let userInfo = await getUserInfo(userid);
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
+
+        if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
+            return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
+        }
+        userid = userInfo.user_id;
+        console.log(userid);
+        console.log(req.body);
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 1], req.originalUrl || req.url); //check user exist in DB   
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
+
         let objfile = {};
         let Arrayresposne = [];
 
@@ -300,8 +352,8 @@ router.get("/reservation/category/subcategory", async (req, res) => {
         const reser_sub_id = req.query.reser_sub_id
         if (!reser_sub_id) {
             return res.send({
-                success: '0',
-                message: "reser_sub_id required!",
+                Success: '0',
+                Message: "reser_sub_id required!",
             });
         }
 
@@ -316,7 +368,7 @@ router.get("/reservation/category/subcategory", async (req, res) => {
         JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
         JOIN reservation ON reservation.reser_id = reservation_category.reser_id
         where reservation.status = "Active" and reservation_category.status = "Active" and reservation_sub_category.status = "Active" and reservation_sub_category.reser_sub_id = ${reser_sub_id} `
-        const executereservationcategorysql = await executeQuery(reservationcategorysql)
+        const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
 
         if (executereservationcategorysql.length > 0) {
             const result = executereservationcategorysql.map((item) => {
@@ -409,159 +461,196 @@ router.get("/reservation/category/subcategory", async (req, res) => {
             });
             objfile['reservation_subcategory'] = result;
             Arrayresposne.push(objfile)
+            logger.success(`Route: ${req.originalUrl || req.url}`);
 
-            const response = { Response: { Success: "1", message: "Success", result: Arrayresposne } }
+            const response = { Response: { Success: "1", Message: "Success", result: Arrayresposne } }
             res.send(response)
 
         } else {
-            const response = { Response: { Success: "0", message: "No Records!", } };
+            logger.success(`Route: ${req.originalUrl || req.url}, Record:[]`);
+            const response = { Response: { Success: "0", Message: "No Records!", } };
             return res.json(response);
         }
     } catch (error) {
         console.log(error);
-        return res.status(500).json({ success: '0', message: error.message, });
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, });
     }
 })
 
 // ------------------------------------------------------------------reservation booking api
 
 router.post("/reservation/booking/create", async (req, res) => {
+    try {
 
-    let { userid } = req.body;
-    if (!userid) { return res.send({ Response: { success: '0', message: "User Id is required!", } }); }
+        let { userid } = req.body;
+        if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
+        let userInfo = await getUserInfo(userid);
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
 
-    console.log(userid);
+        if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
+            return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
+        }
+        userid = userInfo.user_id;
+        console.log(userid);
+        console.log(req.body);
 
-    let userInfo = await getUserInfo(userid);
-    console.log(userid);
-    if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { success: '0', message: "User Info is required!", } }); }
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 1], req.originalUrl || req.url); //check user exist in DB   
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
-    if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
-        return res.send({ Response: { success: '0', message: "Key Validation Error", result: [] } });
-    }
-
-    userid = userInfo.user_id;
-    // let userid = 61008;
-    console.log(userid);
-
-    console.log(req.body);
-
-
-    const userResult = await executeQuery(`SELECT * FROM users WHERE id = ?`, [userid]); //check user exist in DB   
-    if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
-
-    let { reser_id, reser_catid, resersubcatid } = req.body;
-    let { type, date, time, time_slot, peoples, guest_name, guest_whatsapp, remarks, balloon_theme } = req.body;
-    let { menu_type, veg_or_nonveg } = req.body;
-    let { cake, cake_msg, cake_weight, cake_shape, cakeShapePrice } = req.body;
-    let { photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice } = req.body;
-    let { ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice } = req.body;
-    let { total, price } = req.body;
+        let { reser_id, reser_catid, resersubcatid } = req.body;
+        let { type, date, time, time_slot, peoples, guest_name, guest_whatsapp, remarks, balloon_theme } = req.body;
+        let { menu_type, veg_or_nonveg } = req.body;
+        let { cake, cake_msg, cake_weight, cake_shape, cakeShapePrice } = req.body;
+        let { photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice } = req.body;
+        let { ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice } = req.body;
+        let { total, price } = req.body;
 
 
-    if (!reser_id || !reser_catid || !resersubcatid) {
-        return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
-    }
+        if (!reser_id || !reser_catid || !resersubcatid) {
+            return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
+        }
 
-    if ((type == "CL") && (!date || !time_slot || !guest_name
-        || !peoples || !menu_type || !total || !price)) {
-        return res.json({ Response: { Success: "0", Message: "Please Provide Valid candle light dinner Details" } });
-    }
+        if ((type == "CL") && (!date || !time_slot || !guest_name
+            || !peoples || !menu_type || !total || !price)) {
+            return res.json({ Response: { Success: "0", Message: "Please Provide Valid candle light dinner Details" } });
+        }
 
-    if ((type == "BP") && (!date || !time_slot || !peoples || !guest_name
-        || !cake || !cake_msg || !cake_shape || !cake_weight || !total || !price)) {
-        return res.json({ Response: { Success: "0", Message: "Please Provide Valid birthday party Details" } });
-    }
+        if ((type == "BP") && (!date || !time_slot || !peoples || !guest_name
+            || !cake || !cake_msg || !cake_shape || !cake_weight || !total || !price)) {
+            return res.json({ Response: { Success: "0", Message: "Please Provide Valid birthday party Details" } });
+        }
 
-    if ((type == "TB") && (!date || !time || !peoples || !total || !price)) {
-        return res.json({ Response: { Success: "0", Message: "Please Provide Valid table booking Details" } });
-    }
+        if ((type == "TB") && (!date || !time || !peoples || !total || !price)) {
+            return res.json({ Response: { Success: "0", Message: "Please Provide Valid table booking Details" } });
+        }
 
-    if (!price || !total) { return res.json({ Response: { Success: "0", Message: "total Amount not valid" } }); }
+        if (!price || !total) { return res.json({ Response: { Success: "0", Message: "total Amount not valid" } }); }
 
-    price = parseInt(price, 10);
-    total = parseInt(total, 10);
+        price = parseInt(price, 10);
+        total = parseInt(total, 10);
 
-    if (type == "CL" || type == "BP") {
-        photoShootPrice = parseInt(photoShootPrice, 10);
-        photoPrintPrice = parseInt(photoPrintPrice, 10);
-        flowerPrice = parseInt(flowerPrice, 10);
-        firePrice = parseInt(firePrice, 10);
-        ledPrice = parseInt(ledPrice, 10);
-        agePrice = parseInt(agePrice, 10);
-    }
-    let bookingStatus = (type == "TB") ? "Booked" : "Created";
-    // ["Created","Booked"]
+        if (type == "CL" || type == "BP") {
+            photoShootPrice = parseInt(photoShootPrice, 10);
+            photoPrintPrice = parseInt(photoPrintPrice, 10);
+            flowerPrice = parseInt(flowerPrice, 10);
+            firePrice = parseInt(firePrice, 10);
+            ledPrice = parseInt(ledPrice, 10);
+            agePrice = parseInt(agePrice, 10);
+        }
+        let bookingStatus = (type == "TB") ? "Booked" : "Created";
+        // ["Created","Booked"]
 
-    let formatDate = new Date();
-    let reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [resersubcatid]); //check user exist in DB   
-    let insertQuery = "";
-    let sqlValues = [];
+        let formatDate = new Date();
+        let reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [resersubcatid], req.originalUrl || req.url); //check user exist in DB   
+        let insertQuery = "";
+        let sqlValues = [];
 
-    if (type == "CL") {
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, menu_type, veg_or_nonveg,guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice,fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice, amount, total_amount,comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, menu_type, veg_or_nonveg, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
-    } else if (type == "BP") {
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, cake_weight, cake_shape,cakeShapePrice, guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice,amount, total_amount, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, cake_weight, cake_shape, cakeShapePrice, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
-    } else {
-        insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people,guest_name,guest_whatsapp, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-        sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, guest_name, guest_whatsapp, remarks, bookingStatus, formatDate];
-    }
-
-    con.query(insertQuery, sqlValues, async (error, result) => {
-        if (error) {
-            console.log(error)
-            return res.json({ Response: { Success: "0", Message: "Booking failed" } });
+        if (type == "CL") {
+            insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, menu_type, veg_or_nonveg,guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice,fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice, amount, total_amount,comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?,?,?,?,?)`;
+            sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, menu_type, veg_or_nonveg, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
+        } else if (type == "BP") {
+            insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time,time_slot, total_people, cake_weight, cake_shape,cakeShapePrice, guest_name,guest_whatsapp,balloon_theme,cake,cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice,is_led, ledName, led, ledPrice, is_age, ageName, age, agePrice,amount, total_amount, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?, ?, ?, ?, ?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?, ?, ?, ?, ?, ?,?, ?,?,?,?)`;
+            sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, time_slot, peoples, cake_weight, cake_shape, cakeShapePrice, guest_name, guest_whatsapp, balloon_theme, cake, cake_msg, photoShoot, photoShootPrice, photoPrint, photoPrintPrice, flower, flowerPrice, fire, firePrice, ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice, price, total, remarks, bookingStatus, formatDate];
         } else {
-            const reservationId = result.insertId;
-            if (type == "TB") {
-                return res.json({
-                    Response: {
-                        Success: "1", Message: "Booked!",
-                        ReservationId: reservationId,
-                        reservationSubCategory: reservationSubCategory,
-                        user: userResult
-                    }
-                });
-            }
-            // await mailbooking(reservationId, res)
-            let razorPayCreate = await createOrder({ amount: total, receipt: userid.toString() })
+            insertQuery = `INSERT INTO reservation_booking (reservation_id,reservation_catid,reservation_sub_catid,user_id,reservation_type,date, time, total_people,guest_name,guest_whatsapp, comment,booking_status, created_at) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            sqlValues = [reser_id, reser_catid, resersubcatid, userid, type, date, time, peoples, guest_name, guest_whatsapp, remarks, bookingStatus, formatDate];
+        }
 
-            if (!razorPayCreate.success) {
-                return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
-            }
-            let RazorpayOrder = razorPayCreate.order;
+        con.query(insertQuery, sqlValues, async (error, result) => {
+            if (error) {
+                console.log(error)
+                logger.error(`Start Route: "${req.originalUrl || req.url}"`);
+                logger.error(`MySQL Error: ${error.message}`);
+                logger.error(`SQL Query: ${insertQuery}`);
+                logger.error(`Values: ${JSON.stringify(sqlValues)}`);
 
-            //Update razorpay_order_id
-            const formatedate = new Date()
-            const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
-            con.query(sql2, [RazorpayOrder.id, formatedate], async (Error, result) => {
-                if (Error) {
-                    console.log(Error)
-                    return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
-                } else {
-                    let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [reservationId]);
-                    bookingInfo.sub_tilte = reservationSubCategory.sub_title;
+                let stackLines = error.stack?.split('\n') || [];
+                let errorLine = stackLines[1]?.trim();
+                if (errorLine) {
+                    logger.error(`Error occurred at: ${errorLine}`);
+                }
+                logger.error(`End Route: "${req.originalUrl || req.url}"`);
+
+
+                return res.json({ Response: { Success: "0", Message: "Booking failed" } });
+            } else {
+                const reservationId = result.insertId;
+                logger.success(`Route: ${req.originalUrl || req.url}, booking_id:${reservationId}`);
+                if (type == "TB") {
+
+                    let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [booking_id], req.originalUrl || req.url);
                     if (bookingInfo.length > 0) {
-                        await sendMessage({ cus: userResult },
-                            { booking: bookingInfo }, "booking"); //whatsapp
-                    }
+                        let date = await getStringDate(bookingInfo[0].date);
 
+                        let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name };
+                        let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time, total_people: bookingInfo[0].total_people };
+
+                        await sendMessage(cus, booking, "booking"); //whatsapp
+                    }
 
                     return res.json({
                         Response: {
                             Success: "1", Message: "Booked!",
                             ReservationId: reservationId,
-                            RazorpayOrder: RazorpayOrder,
                             reservationSubCategory: reservationSubCategory,
                             user: userResult
                         }
                     });
                 }
-            });
-        }
-    });
+                // await mailbooking(reservationId, res)
+                let razorPayCreate = await createOrder({ amount: total, receipt: userid.toString() })
+
+                if (!razorPayCreate.success) {
+                    return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
+                }
+                let RazorpayOrder = razorPayCreate.order;
+
+                //Update razorpay_order_id
+                const formatedate = new Date()
+                const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
+                con.query(sql2, [RazorpayOrder.id, formatedate], async (Error, result) => {
+                    if (Error) {
+                        console.log(Error)
+                        logger.error(`Start Route: "${req.originalUrl || req.url}"`);
+                        logger.error(`MySQL Error: ${Error.message}`);
+                        logger.error(`SQL Query: ${sql2}`);
+                        logger.error(`Values: ${JSON.stringify([RazorpayOrder.id, formatedate])}`);
+
+                        let stackLines = Error.stack?.split('\n') || [];
+                        let errorLine = stackLines[1]?.trim();
+                        if (errorLine) {
+                            logger.error(`Error occurred at: ${errorLine}`);
+                        }
+                        logger.error(`End Route: "${req.originalUrl || req.url}"`);
+                        return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
+                    } else {
+
+                        logger.success(`Created Route: ${req.originalUrl || req.url}, booking_id:${reservationId}`);
+
+                        return res.json({
+                            Response: {
+                                Success: "1", Message: "Created!",
+                                ReservationId: reservationId,
+                                RazorpayOrder: RazorpayOrder,
+                                reservationSubCategory: reservationSubCategory,
+                                user: userResult
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+    } catch (error) {
+        console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
+    }
 
 });
 
@@ -569,53 +658,85 @@ router.post("/reservation/booking/create", async (req, res) => {
 // ------------------------------------------------------------------Reservation Booking update
 // update payment status
 router.post("/reservation/booking/update", async (req, res) => {
+    try {
 
-    console.log(req.body);
-    const { razorpay_payment_status, booking_id, razorpay_payment_id } = req.body;
-    let { userid } = req.body;
+        console.log(req.body);
+        const { razorpay_payment_status, booking_id, razorpay_payment_id } = req.body;
+        let { userid } = req.body;
 
-    let userInfo = await getUserInfo(userid);
-    if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { success: '0', message: "User Info is required!", } }); }
-    userid = userInfo.user_id;
+        let userInfo = await getUserInfo(userid);
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
+        userid = userInfo.user_id;
 
-    if (!userid) { return res.send({ Response: { success: '0', message: "User ID is required!", } }); }
-    if (!booking_id) { return res.send({ Response: { success: '0', message: "Booking ID is required!", } }); }
-    if (!razorpay_payment_id) { return res.send({ Response: { success: '0', message: "Payment ID Id is required!", } }); }
+        if (!userid) { return res.send({ Response: { Success: '0', Message: "User ID is required!", } }); }
+        if (!booking_id) { return res.send({ Response: { Success: '0', Message: "Booking ID is required!", } }); }
+        if (!razorpay_payment_id) { return res.send({ Response: { Success: '0', Message: "Payment ID Id is required!", } }); }
 
-    const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid]); //check user exist in DB   
-    if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url); //check user exist in DB   
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
-    const { razorpay_order_id, razorpay_signature,
-        razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
-        razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id } = req.body;
+        const { razorpay_order_id, razorpay_signature,
+            razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
+            razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id } = req.body;
 
-    const formatedate = new Date()
+        const formatedate = new Date()
 
-    let bookingStatus = "Booked";
+        let bookingStatus = "Booked";
 
-    let paymentDetails = await fetchPaymentDetails(razorpay_payment_id);
+        let paymentDetails = await fetchPaymentDetails(razorpay_payment_id);
 
-    console.log(paymentDetails);
+        console.log(paymentDetails);
 
-    let updateParams = [razorpay_payment_status, paymentDetails.amount / 100, JSON.stringify(paymentDetails), razorpay_payment_id, razorpay_signature, bookingStatus, formatedate, formatedate];
-    let updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?, razorpay_payment_amount=?, razorpay_payment_detail=?, razorpay_payment_id=?, razorpay_signature=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id='${razorpay_order_id}' AND booking_id=${booking_id} AND booking_status='Created'`;
+        let updateParams = [razorpay_payment_status, paymentDetails.amount / 100, JSON.stringify(paymentDetails), razorpay_payment_id, razorpay_signature, bookingStatus, formatedate, formatedate];
+        let updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?, razorpay_payment_amount=?, razorpay_payment_detail=?, razorpay_payment_id=?, razorpay_signature=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id='${razorpay_order_id}' AND booking_id=${booking_id} AND booking_status='Created'`;
 
-    if (razorpay_payment_status == "error") {
-        updateParams = [razorpay_payment_status, razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
-            razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id, bookingStatus, formatedate, formatedate];
-        updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?,razorpay_error_code=?, razorpay_error_description=?, razorpay_error_source=?, razorpay_error_step=?,
+        if (razorpay_payment_status == "error") {
+            updateParams = [razorpay_payment_status, razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
+                razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id, bookingStatus, formatedate, formatedate];
+            updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?,razorpay_error_code=?, razorpay_error_description=?, razorpay_error_source=?, razorpay_error_step=?,
         razorpay_error_reason=?, razorpay_error_order_id=?, razorpay_error_payment_id=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id=${razorpay_order_id} AND booking_id=${booking_id}`;
-    }
-
-    //Update razorpay_payment_id, razorpay_signature
-    con.query(updateSQL, updateParams, (Error, result) => {
-        if (Error) {
-            console.log(Error)
-            return res.json({ Response: { Success: "0", Message: "Error in Update payment details" } });
-        } else {
-            return res.json({ Response: { Success: "1", Message: "Booked!" } });
         }
-    });
+
+        //Update razorpay_payment_id, razorpay_signature
+        con.query(updateSQL, updateParams, async (Error, result) => {
+            if (Error) {
+                console.log(Error)
+                logger.error(`Start Route: "${req.originalUrl || req.url}"`);
+                logger.error(`MySQL Error: ${Error.message}`);
+                logger.error(`SQL Query: ${updateSQL}`);
+                logger.error(`Values: ${JSON.stringify(updateParams)}`);
+
+                let stackLines = Error.stack?.split('\n') || [];
+                let errorLine = stackLines[1]?.trim();
+                if (errorLine) {
+                    logger.error(`Error occurred at: ${errorLine}`);
+                }
+                logger.error(`End Route: "${req.originalUrl || req.url}"`);
+                return res.json({ Response: { Success: "0", Message: "Error in Update payment details" } });
+            } else {
+
+                let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [booking_id], req.originalUrl || req.url);
+                if (bookingInfo.length > 0) {
+                    let reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [bookingInfo[0].reservation_sub_catid], req.originalUrl || req.url); //check user exist in DB   
+
+                    let date = await getStringDate(bookingInfo[0].date);
+
+                    let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name };
+                    let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time_slot, total_people: bookingInfo[0].total_people };
+
+                    await sendMessage(cus, booking, "booking"); //whatsapp
+                }
+                logger.success(`Route: ${req.originalUrl || req.url}, updatebooking_id:${booking_id}`);
+                return res.json({ Response: { Success: "1", Message: "Booked!" } });
+            }
+        });
+    } catch (error) {
+        console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
+    }
 });
 
 
@@ -626,12 +747,12 @@ router.post("/order/api", async (req, res) => {
         let { userid } = req.body;
         // let userid = 61008;
         let userInfo = await getUserInfo(userid);
-        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { success: '0', message: "User Info is required!", } }); }
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
         userid = userInfo.user_id;
-        if (!userid) { return res.send({ Response: { success: '0', message: "User Id is required!", } }); }
+        if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
 
-        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid]); //check user exist in DB   
-        if (userResult.length <= 0) { return res.send({ Response: { success: '0', message: "Please Signup!", } }); }
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url); //check user exist in DB   
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
         let reservationbookingsql = `SELECT 
             reservation_booking.booking_id, 
@@ -673,12 +794,12 @@ router.post("/order/api", async (req, res) => {
             reservation_booking.amount, 
             reservation_booking.total_amount, 
             reservation_booking.comment,
-            reservation_booking.created_at,
             users.name as username,
             users.email as email,
             users.mobile as mobile,
 
             reservation_sub_category.*,
+            reservation_booking.created_at,
             reservation.reser_main_title,
             reservation.description,
             reservation.reser_code,
@@ -690,7 +811,7 @@ router.post("/order/api", async (req, res) => {
         JOIN users ON users.id = reservation_booking.user_id
         where reservation_sub_category.status = "Active" AND reservation_booking.user_id =${userid} ORDER BY reservation_booking.date ASC`;
 
-        const executereservationbookingsql = await executeQuery(reservationbookingsql)
+        const executereservationbookingsql = await executeQuery(reservationbookingsql, [], req.originalUrl || req.url)
 
         if (executereservationbookingsql.length > 0) {
             const result = executereservationbookingsql.map((item) => {
@@ -784,12 +905,37 @@ router.post("/order/api", async (req, res) => {
             });
             // objfile['reservation_booking'] = result;
             // objfile['user'] = userResult;
+            logger.success(`Route: ${req.originalUrl || req.url}`);
             res.send({ Response: { Success: "1", Message: "Success", Result: result } })
         } else {
             res.send({ Response: { Success: "1", Message: "NO Records", Result: [] } });
         }
     } catch (error) {
-        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
+    }
+});
+
+router.post("/check/booking/time_slot", async (req, res) => {
+    try {
+        let { userid } = req.body;
+        // let userid = 61008;
+        let userInfo = await getUserInfo(userid);
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
+        userid = userInfo.user_id;
+        if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
+
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url); //check user exist in DB   
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
+
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 });
 
@@ -801,10 +947,14 @@ router.post("/send/whatsapp/message", async (req, res) => {
             booking,
             "booking"
         );
+        logger.success(`Route: "${req.originalUrl || req.url}", ID: 1, Email: logu.nath001@gmail.com, Mobile: 9629188839, Message: Registered`);
         res.send({ Response: { Success: "1", Message: "Success" } })
     } catch (error) {
         console.log(error)
-        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 });
 
