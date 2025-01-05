@@ -210,7 +210,7 @@ router.get("/reservation/category/list", async (req, res) => {
             objfile['description'] = executesql[0].description;
             objfile['reser_id'] = executesql[0].reser_id;
             objfile['reser_code'] = executesql[0].reser_code;
-            
+
 
             let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id}`
             const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
@@ -927,8 +927,27 @@ router.post("/check/booking/time_slot", async (req, res) => {
         userid = userInfo.user_id;
         if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
 
-        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url); //check user exist in DB   
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url);
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
+
+        let { date, time_slot } = req.body;
+        console.log(date);
+        console.log(time_slot);
+
+        let checkbookingsql = `SELECT * FROM reservation_booking WHERE time_slot=? AND date=? AND booking_status= ?`;
+
+        let objfile = {};
+
+        const checkreservationbookingsql = await executeQuery(checkbookingsql, [time_slot, date, "Booked"], req.originalUrl || req.url)
+
+        if (checkreservationbookingsql.length > 0) {
+            objfile['count'] = checkreservationbookingsql.length;
+            logger.success(`Route: ${req.originalUrl || req.url}`);
+            res.send({ Response: { Success: "1", Message: "Success", Result: objfile } })
+        } else {
+            objfile['count'] = 0;
+            res.send({ Response: { Success: "1", Message: "NO Records", Result: objfile } });
+        }
 
     } catch (error) {
         console.log(error)
