@@ -930,15 +930,16 @@ router.post("/check/booking/time_slot", async (req, res) => {
         const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url);
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
-        let { date, time_slot } = req.body;
+        let { date, time_slot, res_scat_id } = req.body;
         console.log(date);
         console.log(time_slot);
+        console.log(res_scat_id);
 
-        let checkbookingsql = `SELECT * FROM reservation_booking WHERE time_slot=? AND date=? AND booking_status= ?`;
+        let checkbookingsql = `SELECT * FROM reservation_booking WHERE time_slot=? AND date=? AND reservation_sub_catid=? AND booking_status= ?`;
 
         let objfile = {};
 
-        const checkreservationbookingsql = await executeQuery(checkbookingsql, [time_slot, date, "Booked"], req.originalUrl || req.url)
+        const checkreservationbookingsql = await executeQuery(checkbookingsql, [time_slot, date, res_scat_id, "Booked"], req.originalUrl || req.url)
 
         if (checkreservationbookingsql.length > 0) {
             objfile['count'] = checkreservationbookingsql.length;
