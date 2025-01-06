@@ -584,7 +584,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                 logger.success(`Route: ${req.originalUrl || req.url}, booking_id:${reservationId}`);
                 if (type == "TB") {
 
-                    let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [booking_id], req.originalUrl || req.url);
+                    let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [reservationId], req.originalUrl || req.url);
                     if (bookingInfo.length > 0) {
                         let date = await getStringDate(bookingInfo[0].date);
 
