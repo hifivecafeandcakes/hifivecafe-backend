@@ -588,7 +588,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                     if (bookingInfo.length > 0) {
                         let date = await getStringDate(bookingInfo[0].date);
 
-                        let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name };
+                        let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name, user_email: userResult[0].email };
                         let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time, total_people: bookingInfo[0].total_people };
 
                         await sendMessage(cus, booking, "booking"); //whatsapp
