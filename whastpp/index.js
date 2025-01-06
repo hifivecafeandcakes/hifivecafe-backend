@@ -3,9 +3,10 @@ dotenv.config()
 
 import axios from 'axios';
 
-import { bookingMessage } from './message.js';
+import { bookingMessage } from '../mail/message.js';
 import { executeQuery } from '../dbHelper.js';
 import logger from '../logger.js';
+import { sendRegistrationEmail } from '../mail/sendMail.js';
 
 // Replace with your access token and WhatsApp Business Phone Number ID
 const accessToken = process.env.FB_ACCESS_TOKEN;
@@ -27,11 +28,15 @@ export function sendMessage(cus, booking, msgType) {
             console.log(booking);
             console.log(cafeData);
             // Define the API endpoint
+            let sms_message = "";
             const url = `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`;
 
 
             if (msgType == "booking") {
-                // message = await bookingMessage(cus, booking, cafeData);
+                sms_message = await bookingMessage(cus, booking, cafeData);
+                if (sms_message != "") { //Malling
+                    await sendRegistrationEmail(cus.user_email, cus.user_email, sms_message);
+                }
             }
 
             logger.info(`Route: sendMessage, booking Parameters: ${JSON.stringify(booking)}`);
@@ -126,7 +131,7 @@ async function updateMessageEvent(cus, booking, flg, message, success_id = null,
 
         const updation = await executeQuery(
             `INSERT INTO messages (booking_id, cus_name, cus_phone, message, sent_flag, success_id, error, created_at) VALUES (?, ?, ?, ?, ?, ?, ?,?)`,
-            data
+            data, "updateMessageEvent"
         );
 
         // Optionally handle the result of the query

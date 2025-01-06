@@ -4,6 +4,8 @@ import { encryptData, decryptData } from '../encryption.js'
 import { getUserInfo, validateEncrypt, reg, getStringDate } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
+import { sendRegistrationEmail } from '../mail/sendMail.js';
+
 
 import con from "../db.js";
 
@@ -63,6 +65,7 @@ router.post('/register', async (req, res) => {
         result.push({ email: email1, user_id: encryptedData, name: signin[0].name, mobile: signin[0].mobile });
         console.log(result);
         logger.success(`Route: ${req.originalUrl || req.url}, ID: ${signin[0].id}, Email: ${email1}, Mobile: ${signin[0].mobile}`);
+        await sendRegistrationEmail(email1, email1);
         return res.send({ Response: { Success: '1', Message: "Register and Logged in Successfully", result: result } });
     }
     catch (error) {
@@ -721,7 +724,7 @@ router.post("/reservation/booking/update", async (req, res) => {
 
                     let date = await getStringDate(bookingInfo[0].date);
 
-                    let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name };
+                    let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name, user_email: userResult[0].email };
                     let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time_slot, total_people: bookingInfo[0].total_people };
 
                     await sendMessage(cus, booking, "booking"); //whatsapp
@@ -959,9 +962,11 @@ router.post("/check/booking/time_slot", async (req, res) => {
     }
 });
 
+
+//booking mailing and whatsapp message
 router.post("/send/whatsapp/message", async (req, res) => {
     try {
-        let cus = { user_mobile: 919629188839, user_name: "Loganath M" };
+        let cus = { user_mobile: 919629188839, user_name: "Loganath M", user_email: "logu.nath001@gmail.com" };
         let booking = { booking_id: "TESTBOOKING1", sub_title: "RED TABLE", date: "12-10-2025", time_slot: "11:00 pm to 12:30 pm", total_people: 5 };
         await sendMessage(cus,
             booking,
@@ -978,6 +983,26 @@ router.post("/send/whatsapp/message", async (req, res) => {
     }
 });
 
+
+//Registered only mailing
+router.post("/send/mail/message", async (req, res) => {
+    try {
+        const userEmail = 'logu.nath001@gmail.com'; // User's email
+        const userName = 'Loganath m'; // User's name
+
+        console.log('User registered successfully.');
+        await sendRegistrationEmail(userEmail, userName);
+
+        logger.success(`Route: "${req.originalUrl || req.url}", userEmail: "${userEmail}", userName: "${userName}",Message: Registered`);
+        res.send({ Response: { Success: "1", Message: "Success" } })
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
+    }
+});
 
 
 export default router;
