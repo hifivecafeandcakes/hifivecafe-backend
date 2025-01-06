@@ -20,16 +20,17 @@ export const sendRegistrationEmail = async (toEmail, userName, message = null) =
     return new Promise(async (resolve, reject) => {
         try {
 
+            // Registered mail message    
             let htmlMessage = `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                 <div style="text-align: center; padding: 20px; background-color: #f7f7f7;">
-                    <img src="https://hifivecafe.in/logo.png" alt="Cafe Logo" style="width: 150px; margin-bottom: 20px;">
+                    <img src="http://stage.hifivecafe.in/logo.png" alt="Cafe Logo" style="width: 150px; margin-bottom: 20px;">
                 </div>
             <div style="padding: 20px; background-color: #ffffff; border: 1px solid #ddd; border-radius: 5px;">
             <h1 style="color:rgb(255, 34, 34);">Welcome to ${process.env.CAFE_NAME}!</h1>
             <p>Thank you for registering with us. We're excited to have you on board.</p>
             <h4>Login Username: <span style="color:rgb(74, 255, 34);">${userName}</span></h4>
-            <p style="color: #555;">If you have any questions, feel free to reply to this email or whatsapp <img src="https://hifivecafe.in/whatsapp.jpg" alt="whatsapp Logo" style="width: 10px; height:10px;"> 9500400992.</p>
+            <p style="color: #555;">If you have any questions, feel free to reply to this email or whatsapp <img src="http://stage.hifivecafe.in/whatsapp.jpg" alt="whatsapp Logo" style="width: 10px; height:10px;"> 9500400992.</p>
             <p>Best regards,</p>
             <p style="font-weight: bold; color: #ff5722;">
                 ${process.env.CAFE_NAME}<br>
