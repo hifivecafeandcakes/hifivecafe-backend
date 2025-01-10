@@ -6,7 +6,7 @@ import axios from 'axios';
 import { bookingMessage } from '../mail/message.js';
 import { executeQuery } from '../dbHelper.js';
 import logger from '../logger.js';
-import { sendRegistrationEmail } from '../mail/sendMail.js';
+import { sendEmail } from '../mail/sendMail.js';
 
 // Replace with your access token and WhatsApp Business Phone Number ID
 const accessToken = process.env.FB_ACCESS_TOKEN;
@@ -16,13 +16,13 @@ const recipientPhoneNumber = process.env.FB_RECIPIENT_PHONE_NO; // Recipient's p
 const cafeNumber = process.env.CAFE_NUMBER;
 const cafeName = process.env.CAFE_NAME;
 
-let cafeData = { cafeNumber: cafeNumber, cafeName: cafeName }
 
 let message = '';
 
 export function sendMessage(cus, booking, msgType) {
     return new Promise(async (resolve, reject) => {
         try {
+            let cafeData = { cafeNumber: cafeNumber, cafeName: cafeName }
             console.log(cus.user_mobile);
             console.log(cus);
             console.log(booking);
@@ -33,10 +33,10 @@ export function sendMessage(cus, booking, msgType) {
 
 
             if (msgType == "booking") {
-                sms_message = await bookingMessage(cus, booking, cafeData);
-                if (sms_message != "") { //Malling
-                    await sendRegistrationEmail(cus.user_email, cus.user_email, sms_message);
-                }
+                // sms_message = await bookingMessage(cus, booking, cafeData);
+                // if (sms_message != "") { //Malling
+                //     await sendEmail(cus.user_email, cus.user_email, sms_message);
+                // }
             }
 
             logger.info(`Route: sendMessage, booking Parameters: ${JSON.stringify(booking)}`);

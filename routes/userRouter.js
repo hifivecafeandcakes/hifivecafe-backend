@@ -4,15 +4,14 @@ import { encryptData, decryptData } from '../encryption.js'
 import { getUserInfo, validateEncrypt, reg, getStringDate } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
-import { sendRegistrationEmail } from '../mail/sendMail.js';
-
-
 import con from "../db.js";
 
 // routes/userRouter.js
 import express from 'express';
 import { sendMessage } from '../whastpp/index.js';
 import logger from '../logger.js';
+import { sendEmail } from '../mail/sendMail.js';
+import { mailingMessage } from '../mail/message.js';
 
 const router = express.Router();
 
@@ -65,7 +64,10 @@ router.post('/register', async (req, res) => {
         result.push({ email: email1, user_id: encryptedData, name: signin[0].name, mobile: signin[0].mobile });
         console.log(result);
         logger.success(`Route: ${req.originalUrl || req.url}, ID: ${signin[0].id}, Email: ${email1}, Mobile: ${signin[0].mobile}`);
-        await sendRegistrationEmail(email1, email1);
+        let registeration_mail = await mailingMessage('Registration', { userName: userName });
+        if (registeration_mail != "" && registeration_mail.message && registeration_mail.subject) { //Malling
+            await sendEmail(email1, email1, registeration_mail.message, registeration_mail.subject);
+        }
         return res.send({ Response: { Success: '1', Message: "Register and Logged in Successfully", result: result } });
     }
     catch (error) {
@@ -591,6 +593,12 @@ router.post("/reservation/booking/create", async (req, res) => {
                         let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name, user_email: userResult[0].email };
                         let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time, total_people: bookingInfo[0].total_people };
 
+                        //Malling
+                        let booking_mail = await mailingMessage('Booking', { cus: cus, booking: booking });
+                        if (booking_mail != "" && booking_mail.message && booking_mail.subject) {
+                            await sendEmail(userEmail, userName, booking_mail.message, booking_mail.subject);
+                        }
+
                         await sendMessage(cus, booking, "booking"); //whatsapp
                     }
 
@@ -727,6 +735,10 @@ router.post("/reservation/booking/update", async (req, res) => {
                     let cus = { user_mobile: `91${userResult[0].mobile}`, user_name: userResult[0].name, user_email: userResult[0].email };
                     let booking = { booking_id: `BOOKID${bookingInfo[0].booking_id}`, sub_title: reservationSubCategory[0].sub_tilte, date: date, time_slot: bookingInfo[0].time_slot, total_people: bookingInfo[0].total_people };
 
+                    let booking_mail = await mailingMessage('Booking', { cus: cus, booking: booking });
+                    if (booking_mail != "" && booking_mail.message && booking_mail.subject) {
+                        await sendEmail(userEmail, userName, booking_mail.message, booking_mail.subject);
+                    }
                     await sendMessage(cus, booking, "booking"); //whatsapp
                 }
                 logger.success(`Route: ${req.originalUrl || req.url}, updatebooking_id:${booking_id}`);
@@ -962,6 +974,66 @@ router.post("/check/booking/time_slot", async (req, res) => {
     }
 });
 
+const userForgetPassword = {}; // { email: { otp: '123456', otpExpires: Date, password: 'hashedPassword' } }
+
+router.post("/forgot-password", async (req, res) => {
+    try {
+        const { email } = req.body;
+        const userResult = await executeQuery(`SELECT * FROM users WHERE email = ? `, [email], req.originalUrl || req.url);
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email not registered in Hifive", } }); }
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const otpExpires = Date.now() + 300000; // OTP expires in 5 minutes
+
+        userForgetPassword[email] = { ...userForgetPassword[email], otp, otpExpires };
+
+        //Mailing
+        let otp_mail = await mailingMessage('OTP', { otp: otp });
+        if (otp_mail != "" && otp_mail.message && otp_mail.subject) {
+            let sentMail = await sendEmail(userEmail, userName, otp_mail.message, otp_mail.subject);
+            if (sentMail == "success") {
+                res.send({ Response: { Success: "1", Message: "OTP Sent Successfully to your mail ID" } })
+            } else {
+                res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
+            }
+        }
+
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
+    }
+});
+
+router.post("/reset-password", async (req, res) => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        const user = users[email];
+      
+        if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
+            return res.send({ Response: { Success: '0', Message: "Invalid or expired OTP", } });
+        }      
+
+        //Mailing
+        let otp_mail = await mailingMessage('OTP', { otp: otp });
+        if (otp_mail != "" && otp_mail.message && otp_mail.subject) {
+            let sentMail = await sendEmail(userEmail, userName, otp_mail.message, otp_mail.subject);
+            if (sentMail == "success") {
+                res.send({ Response: { Success: "1", Message: "OTP Sent Successfully to your mail ID" } })
+            } else {
+                res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
+            }
+        }
+
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
+    }
+});
 
 //booking mailing and whatsapp message
 router.post("/send/whatsapp/message", async (req, res) => {
@@ -991,7 +1063,10 @@ router.post("/send/mail/message", async (req, res) => {
         const userName = 'Loganath m'; // User's name
 
         console.log('User registered successfully.');
-        await sendRegistrationEmail(userEmail, userName);
+        let registeration_mail = await mailingMessage('Registration', { userName: userName });
+        if (registeration_mail != "" && registeration_mail.message && registeration_mail.subject) { //Malling
+            await sendEmail(userEmail, userName, registeration_mail.message, registeration_mail.subject);
+        }
 
         logger.success(`Route: "${req.originalUrl || req.url}", userEmail: "${userEmail}", userName: "${userName}",Message: Registered`);
         res.send({ Response: { Success: "1", Message: "Success" } })
