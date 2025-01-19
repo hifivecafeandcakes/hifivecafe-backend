@@ -53,3 +53,14 @@ export async function getStringDate(dateStr) {
     return formattedDate;
 
 }
+
+
+export async function getQueryUsingTab(tabActive) {
+    let query = '';
+    if (tabActive == "Booked") {
+        query = ` AND reservation_booking.date > CURRENT_DATE()`;
+    } else if (tabActive == "Completed") {
+        query = ` AND (reservation_booking.date < CURRENT_DATE() OR reservation_booking.booking_status = '${tabActive}')`;
+    }
+    return query;
+}

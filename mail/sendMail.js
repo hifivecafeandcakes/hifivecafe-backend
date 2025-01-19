@@ -2,7 +2,6 @@ import nodemailer from 'nodemailer';
 
 import dotenv from 'dotenv'
 import logger from '../logger.js';
-import { registrationMessage } from './message.js';
 
 dotenv.config()
 
@@ -16,17 +15,14 @@ const transporter = nodemailer.createTransport({
 });
 
 
-export const sendEmail = async (toEmail, userName, message = null, subject = null) => {
+export const sendEmail = async (toEmail, htmlMessage = null, subject = null) => {
 
     return new Promise(async (resolve, reject) => {
         try {
 
-            let htmlMessage = await registrationMessage(userName);
-            if (htmlMessage != "") {
+            if (htmlMessage != "" && htmlMessage != null ) {
 
-                let subject = 'Registration Successful';
-
-                htmlMessage = (message != null) ? message : htmlMessage;
+                htmlMessage = (htmlMessage != null) ? htmlMessage : htmlMessage;
                 subject = (subject != null) ? subject : subject;
 
                 const mailOptions = {
@@ -38,7 +34,7 @@ export const sendEmail = async (toEmail, userName, message = null, subject = nul
 
                 const info = await transporter.sendMail(mailOptions);
                 logger.success(`Route: ${subject}, Email sent to: ${toEmail}, ID: ${info.messageId}`);
-                resolve('successs');
+                resolve('success');
             }
             else {
                 logger.error(`Route: ${subject}, Email send failed to: ${toEmail}, Message: Message Empty`);

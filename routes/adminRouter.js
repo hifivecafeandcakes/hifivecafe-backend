@@ -992,7 +992,7 @@ router.post("/reservation/booking/list", async (req, res) => {
                     agePrice: item.agePrice,
 
                     remarks: item.comment,
-                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
+                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:mm:ss'),
                     // user
                     user_name: item.username,
                     user_email: item.email,
@@ -1057,8 +1057,8 @@ router.get("/reservation/booking/get:booking_id", async (req, res) => {
                 booking_flowers: item.flowers,
                 booking_flowersPrices: item.flowersPrices,
 
-                booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
-                booking_updated_at: format(new Date(item.updated_at), 'yyyy-MM-dd HH:ii:ss'),
+                booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:mm:ss'),
+                booking_updated_at: format(new Date(item.updated_at), 'yyyy-MM-dd HH:mm:ss'),
 
             };
         });

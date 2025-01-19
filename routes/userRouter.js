@@ -1,7 +1,7 @@
 import { baseImageUrl, baseVideoUrl, deleteImageUrl, deleteVideoUrl } from '../constants.js';
 import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
-import { getUserInfo, validateEncrypt, reg, getStringDate } from '../helper.js';
+import { getUserInfo, validateEncrypt, reg, getStringDate, getQueryUsingTab } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
 import con from "../db.js";
@@ -12,6 +12,8 @@ import { sendMessage } from '../whastpp/index.js';
 import logger from '../logger.js';
 import { sendEmail } from '../mail/sendMail.js';
 import { mailingMessage } from '../mail/message.js';
+
+import crypto from 'crypto';
 
 const router = express.Router();
 
@@ -217,7 +219,7 @@ router.get("/reservation/category/list", async (req, res) => {
             objfile['reser_code'] = executesql[0].reser_code;
 
 
-            let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id}`
+            let reservationcategorysql = `select * from reservation_category where status="Active" and reser_id=${reser_id} ORDER BY CASE reser_cat_code WHEN 'silver' THEN 1 WHEN 'gold' THEN 2 WHEN 'elite' THEN 3 ELSE 4 END`
             const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
 
             if (executereservationcategorysql.length > 0) {
@@ -282,7 +284,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
             objfile['reser_cat_code'] = executesql[0].reser_cat_code;
             objfile['reser_subtitle'] = executesql[0].cat_title;
 
-            let reservationcategorysql = `select * from reservation_sub_category where status="Active" and reser_id=${reser_id} AND reser_cat_id=${resercat_id}`
+            let reservationcategorysql = `select * from reservation_sub_category where status="Active" and reser_id=${reser_id} AND reser_cat_id=${resercat_id} ORDER BY sub_cat_price_range ASC`
             const executereservationcategorysql = await executeQuery(reservationcategorysql, [], req.originalUrl || req.url)
 
             //const firstimgurl = baseImageUrl;
@@ -759,7 +761,8 @@ router.post("/reservation/booking/update", async (req, res) => {
 // Cart
 router.post("/order/api", async (req, res) => {
     try {
-        let { userid } = req.body;
+        let { userid, activeTab } = req.body;
+
         // let userid = 61008;
         let userInfo = await getUserInfo(userid);
         if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
@@ -824,7 +827,22 @@ router.post("/order/api", async (req, res) => {
         JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
         JOIN reservation ON reservation.reser_id = reservation_category.reser_id
         JOIN users ON users.id = reservation_booking.user_id
-        where reservation_sub_category.status = "Active" AND reservation_booking.user_id =${userid} ORDER BY reservation_booking.date ASC`;
+        where reservation_sub_category.status = "Active" AND reservation_booking.user_id =${userid}`;
+
+        if (activeTab !== "all" && activeTab !== "Completed") {
+
+            if (activeTab == "Booked") {
+                reservationbookingsql += await getQueryUsingTab(activeTab);
+            } else {
+                reservationbookingsql += ` AND reservation_booking.booking_status = '${activeTab}'`;
+            }
+        }
+
+        if (activeTab == "Completed") {
+            reservationbookingsql += await getQueryUsingTab(activeTab);
+        }
+
+        reservationbookingsql += ` ORDER BY reservation_booking.date ASC`;
 
         const executereservationbookingsql = await executeQuery(reservationbookingsql, [], req.originalUrl || req.url)
 
@@ -909,7 +927,7 @@ router.post("/order/api", async (req, res) => {
                     agePrice: item.agePrice,
 
                     remarks: item.comment,
-                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:ii:ss'),
+                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:mm:ss'),
 
 
                     // user
@@ -974,7 +992,6 @@ router.post("/check/booking/time_slot", async (req, res) => {
     }
 });
 
-const userForgetPassword = {}; // { email: { otp: '123456', otpExpires: Date, password: 'hashedPassword' } }
 
 router.post("/forgot-password", async (req, res) => {
     try {
@@ -984,12 +1001,16 @@ router.post("/forgot-password", async (req, res) => {
         const otp = crypto.randomInt(100000, 999999).toString();
         const otpExpires = Date.now() + 300000; // OTP expires in 5 minutes
 
-        userForgetPassword[email] = { ...userForgetPassword[email], otp, otpExpires };
+        const currentdate = new Date();
+        let updateSQL = `UPDATE users SET otp=?, otp_expiry=?, updated_at=? WHERE email=?`;
+        let update_sqlValues = [otp, otpExpires, currentdate, email];
+        const insertOTP = await executeQuery(updateSQL, update_sqlValues, req.originalUrl || req.url);
+        if (insertOTP.length <= 0) { return res.send({ Response: { Success: '0', Message: "OTP not generated, please contact Hifive", result: [] } }); }
 
         //Mailing
         let otp_mail = await mailingMessage('OTP', { otp: otp });
         if (otp_mail != "" && otp_mail.message && otp_mail.subject) {
-            let sentMail = await sendEmail(userEmail, userName, otp_mail.message, otp_mail.subject);
+            let sentMail = await sendEmail(email, otp_mail.message, otp_mail.subject);
             if (sentMail == "success") {
                 res.send({ Response: { Success: "1", Message: "OTP Sent Successfully to your mail ID" } })
             } else {
@@ -1008,24 +1029,29 @@ router.post("/forgot-password", async (req, res) => {
 
 router.post("/reset-password", async (req, res) => {
     try {
-        const { email, otp, newPassword } = req.body;
-        const user = users[email];
-      
-        if (!user || user.otp !== otp || user.otpExpires < Date.now()) {
-            return res.send({ Response: { Success: '0', Message: "Invalid or expired OTP", } });
-        }      
+        let { email, otp, newPassword } = req.body;
 
-        //Mailing
-        let otp_mail = await mailingMessage('OTP', { otp: otp });
-        if (otp_mail != "" && otp_mail.message && otp_mail.subject) {
-            let sentMail = await sendEmail(userEmail, userName, otp_mail.message, otp_mail.subject);
-            if (sentMail == "success") {
-                res.send({ Response: { Success: "1", Message: "OTP Sent Successfully to your mail ID" } })
-            } else {
-                res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
-            }
+        const userResult = await executeQuery(`SELECT * FROM users WHERE email = ? `, [email], req.originalUrl || req.url);
+        if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email not registered in Hifive", } }); }
+
+        let user = userResult[0];
+
+        console.log(user.otp);
+        console.log(otp);
+        if (!user || parseInt(user.otp, 10) !== parseInt(otp, 10) || user.otpExpires < Date.now()) {
+            return res.send({ Response: { Success: '0', Message: "Invalid or expired OTP", } });
         }
 
+        newPassword = encryptData(newPassword.toString(), false);
+
+        const currentdate = new Date();
+        let updateSQL = `UPDATE users SET otp=?, otp_expiry=?, password=?, updated_at=? WHERE email=?`;
+        let update_sqlValues = [null, null, newPassword, currentdate, email];
+
+        const updatePassword = await executeQuery(updateSQL, update_sqlValues, req.originalUrl || req.url);
+        if (updatePassword.length <= 0) { return res.send({ Response: { Success: '0', Message: "Password not Saved, please contact Hifive", result: [] } }); }
+
+        res.send({ Response: { Success: "1", Message: "Password Reset successfully!" } })
     } catch (error) {
         console.log(error)
         const stackLines = error.stack.split('\n'); // Split the stack into lines
