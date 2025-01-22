@@ -31,7 +31,7 @@ export async function createOrder(option) {
     } catch (error) {
 
         logger.error(`Start RazorPay:`);
-        logger.error(`Error Message: ${error}`);
+        logger.error(`Error Message: ${JSON.stringify(error)}`);
         logger.error(`options: ${JSON.stringify(options)}`);
 
         let stackLines = error.stack?.split('\n') || [];
