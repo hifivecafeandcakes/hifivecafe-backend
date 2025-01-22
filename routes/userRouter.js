@@ -66,7 +66,7 @@ router.post('/register', async (req, res) => {
         result.push({ email: email1, user_id: encryptedData, name: signin[0].name, mobile: signin[0].mobile });
         console.log(result);
         logger.success(`Route: ${req.originalUrl || req.url}, ID: ${signin[0].id}, Email: ${email1}, Mobile: ${signin[0].mobile}`);
-        let registeration_mail = await mailingMessage('Registration', { userName: userName });
+        let registeration_mail = await mailingMessage('Registration', { userName: signin[0].name });
         if (registeration_mail != "" && registeration_mail.message && registeration_mail.subject) { //Malling
             await sendEmail(email1, email1, registeration_mail.message, registeration_mail.subject);
         }
