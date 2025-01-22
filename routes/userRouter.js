@@ -515,6 +515,9 @@ router.post("/reservation/booking/create", async (req, res) => {
         let { ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice } = req.body;
         let { total, price } = req.body;
 
+        
+        total = 1;
+        price = 1;
 
         if (!reser_id || !reser_catid || !resersubcatid) {
             return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
@@ -1010,7 +1013,7 @@ router.post("/forgot-password", async (req, res) => {
         //Mailing
         let otp_mail = await mailingMessage('OTP', { otp: otp });
         if (otp_mail != "" && otp_mail.message && otp_mail.subject) {
-            let sentMail = await sendEmail(email, otp_mail.message, otp_mail.subject);
+            let sentMail = await sendEmail(email, email, otp_mail.message, otp_mail.subject);
             if (sentMail == "success") {
                 res.send({ Response: { Success: "1", Message: "OTP Sent Successfully to your mail ID" } })
             } else {
