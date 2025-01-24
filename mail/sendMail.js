@@ -15,12 +15,12 @@ const transporter = nodemailer.createTransport({
 });
 
 
-export const sendEmail = async (toEmail, htmlMessage = null, subject = null) => {
+export const sendEmail = async (toEmail, userName = null, htmlMessage = null, subject = null) => {
 
     return new Promise(async (resolve, reject) => {
         try {
 
-            if (htmlMessage != "" && htmlMessage != null ) {
+            if (htmlMessage != "" && htmlMessage != null) {
 
                 htmlMessage = (htmlMessage != null) ? htmlMessage : htmlMessage;
                 subject = (subject != null) ? subject : subject;
