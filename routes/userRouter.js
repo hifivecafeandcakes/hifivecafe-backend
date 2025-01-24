@@ -516,8 +516,8 @@ router.post("/reservation/booking/create", async (req, res) => {
         let { total, price } = req.body;
 
         
-        // total = 1;
-        // price = 1;
+        total = 1;
+        price = 1;
 
         if (!reser_id || !reser_catid || !resersubcatid) {
             return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
