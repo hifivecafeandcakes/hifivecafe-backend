@@ -5,11 +5,8 @@ dotenv.config()
 
 
 const razorpay = new Razorpay({
-    // key_id: process.env.RAZORPAY_KEY_ID,
-    // key_secret: process.env.RAZORPAY_KEY_SECRET,
-
-    key_id: "rzp_live_lKsHAKbB6toKJk",
-    key_secret: "CMHrDCdRoakvBrcndd4gd9NU",
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 
@@ -30,15 +27,6 @@ export async function createOrder(option) {
             logger.success(`Start RazorPay1:`);
             logger.success(`order: ${JSON.stringify(order)}`);
             logger.success(`End RazorPay:`);
-            // if (err) {
-            //     console.log('Error:', err);
-            //     logger.error(`Error Message1: err`);
-            //     logger.error(`Error Message2: ${JSON.stringify(err)}`);
-            // } else {
-            //     logger.success(`Order Created: ${JSON.stringify(order)}`);
-            // }
-
-
             return { success: true, order: order };
         } catch (error) {
 

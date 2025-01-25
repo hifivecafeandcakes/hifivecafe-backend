@@ -515,9 +515,6 @@ router.post("/reservation/booking/create", async (req, res) => {
         let { ledOption, ledName, led, ledPrice, ageOption, ageName, age, agePrice } = req.body;
         let { total, price } = req.body;
 
-        
-        total = 1;
-        price = 1;
 
         if (!reser_id || !reser_catid || !resersubcatid) {
             return res.json({ Response: { Success: "0", Message: "Invalid entry" } });
@@ -539,8 +536,8 @@ router.post("/reservation/booking/create", async (req, res) => {
 
         if (!price || !total) { return res.json({ Response: { Success: "0", Message: "total Amount not valid" } }); }
 
-        price = parseInt(price, 10);
-        total = parseInt(total, 10);
+        price = (process.env.TEST_MODE == "test") ? parseInt(1, 10) : parseInt(price, 10);
+        total = (process.env.TEST_MODE == "test") ? parseInt(1, 10) : parseInt(total, 10);
 
         if (type == "CL" || type == "BP") {
             photoShootPrice = parseInt(photoShootPrice, 10);
@@ -610,7 +607,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                     return res.json({
                         Response: {
                             Success: "1", Message: "Booked!",
-                            ReservationId: reservationId,
+                            ReservationId: `BOOKID${reservationId}`,
                             reservationSubCategory: reservationSubCategory,
                             user: userResult
                         }
