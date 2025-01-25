@@ -617,7 +617,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                     });
                 }
                 // await mailbooking(reservationId, res)
-                let razorPayCreate = await createOrder({ amount: total, receipt: userid.toString() })
+                let razorPayCreate = await createOrder({ amount: total, receipt: `BOOKID${bookingInfo[0].booking_id}`.toString() })
 
                 if (!razorPayCreate.success) {
                     return res.json({ Response: { Success: "0", Message: "Razorpay Order not Created" } });
