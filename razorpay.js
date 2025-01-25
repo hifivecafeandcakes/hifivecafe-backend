@@ -24,11 +24,19 @@ export async function createOrder(option) {
     };
 
     try {
-        const order = await razorpay.orders.create(options);
-        console.log('order:', order);
+        const order = await razorpay.orders.create(options, (err, orderres));
+        console.log('order:', orderres);
         logger.success(`Start RazorPay:`);
         logger.success(`order: ${JSON.stringify(order)}`);
         logger.success(`End RazorPay:`);
+        if (err) {
+            console.log('Error:', err);
+            logger.error(`Error Message1: err`);
+            logger.error(`Error Message2: ${JSON.stringify(err)}`);
+        } else {
+            logger.success(`Order Created: ${JSON.stringify(order)}`);
+        }
+
 
         return { success: true, order: order };
     } catch (error) {
