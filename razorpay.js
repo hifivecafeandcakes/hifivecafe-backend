@@ -25,18 +25,18 @@ export async function createOrder(option) {
         };
 
         try {
-            const order = await razorpay.orders.create(options, (err, orderres));
-            console.log('order:', orderres);
+            const order = await razorpay.orders.create(options);
+            console.log('order:', order);
             logger.success(`Start RazorPay1:`);
             logger.success(`order: ${JSON.stringify(order)}`);
             logger.success(`End RazorPay:`);
-            if (err) {
-                console.log('Error:', err);
-                logger.error(`Error Message1: err`);
-                logger.error(`Error Message2: ${JSON.stringify(err)}`);
-            } else {
-                logger.success(`Order Created: ${JSON.stringify(order)}`);
-            }
+            // if (err) {
+            //     console.log('Error:', err);
+            //     logger.error(`Error Message1: err`);
+            //     logger.error(`Error Message2: ${JSON.stringify(err)}`);
+            // } else {
+            //     logger.success(`Order Created: ${JSON.stringify(order)}`);
+            // }
 
 
             return { success: true, order: order };
