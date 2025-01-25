@@ -16,43 +16,50 @@ const razorpay = new Razorpay({
 
 //RazorPay Create Order
 export async function createOrder(option) {
-
-    const options = {
-        amount: option.amount * 100, // amount in paise
-        currency: 'INR',
-        receipt: option.receipt
-    };
-
     try {
-        const order = await razorpay.orders.create(options, (err, orderres));
-        console.log('order:', orderres);
-        logger.success(`Start RazorPay1:`);
-        logger.success(`order: ${JSON.stringify(order)}`);
-        logger.success(`End RazorPay:`);
-        if (err) {
-            console.log('Error:', err);
-            logger.error(`Error Message1: err`);
-            logger.error(`Error Message2: ${JSON.stringify(err)}`);
-        } else {
-            logger.success(`Order Created: ${JSON.stringify(order)}`);
+
+        const options = {
+            amount: option.amount * 100, // amount in paise
+            currency: 'INR',
+            receipt: option.receipt
+        };
+
+        try {
+            const order = await razorpay.orders.create(options, (err, orderres));
+            console.log('order:', orderres);
+            logger.success(`Start RazorPay1:`);
+            logger.success(`order: ${JSON.stringify(order)}`);
+            logger.success(`End RazorPay:`);
+            if (err) {
+                console.log('Error:', err);
+                logger.error(`Error Message1: err`);
+                logger.error(`Error Message2: ${JSON.stringify(err)}`);
+            } else {
+                logger.success(`Order Created: ${JSON.stringify(order)}`);
+            }
+
+
+            return { success: true, order: order };
+        } catch (error) {
+
+            logger.error(`Start RazorPay:`);
+            logger.error(`Error Message: ${JSON.stringify(error)}`);
+            logger.error(`options: ${JSON.stringify(options)}`);
+
+            let stackLines = error.stack?.split('\n') || [];
+            let errorLine = stackLines[1]?.trim();
+            if (errorLine) {
+                logger.error(`Error occurred at: ${errorLine}`);
+            }
+            logger.error(`End RazorPay: `);
+            console.error('Error creating order:', error);
+            return { success: false, order: {} };
         }
-
-
-        return { success: true, order: order };
-    } catch (error) {
-
-        logger.error(`Start RazorPay:`);
-        logger.error(`Error Message: ${JSON.stringify(error)}`);
-        logger.error(`options: ${JSON.stringify(options)}`);
-
-        let stackLines = error.stack?.split('\n') || [];
-        let errorLine = stackLines[1]?.trim();
-        if (errorLine) {
-            logger.error(`Error occurred at: ${errorLine}`);
-        }
-        logger.error(`End RazorPay: `);
-        console.error('Error creating order:', error);
+    }
+    catch (error) {
+        logger.error(`Error Message-catch: ${JSON.stringify(error)}`);
         return { success: false, order: {} };
+
     }
 }
 
