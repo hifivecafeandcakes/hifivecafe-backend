@@ -26,7 +26,7 @@ export async function createOrder(option) {
     try {
         const order = await razorpay.orders.create(options, (err, orderres));
         console.log('order:', orderres);
-        logger.success(`Start RazorPay:`);
+        logger.success(`Start RazorPay1:`);
         logger.success(`order: ${JSON.stringify(order)}`);
         logger.success(`End RazorPay:`);
         if (err) {
