@@ -13,6 +13,9 @@ import logger from '../logger.js';
 import { sendEmail } from '../mail/sendMail.js';
 import { mailingMessage } from '../mail/message.js';
 
+import dotenv from 'dotenv'
+dotenv.config()
+
 import crypto from 'crypto';
 
 const router = express.Router();
