@@ -539,8 +539,12 @@ router.post("/reservation/booking/create", async (req, res) => {
 
         if (!price || !total) { return res.json({ Response: { Success: "0", Message: "total Amount not valid" } }); }
 
-        price = (process.env.TEST_MODE == "test") ? parseInt(1, 10) : parseInt(price, 10);
-        total = (process.env.TEST_MODE == "test") ? parseInt(1, 10) : parseInt(total, 10);
+        console.log(price);
+        console.log(total);
+        price = (process.env.TEST_MODE === "true") ? parseInt(1, 10) : parseInt(price, 10);
+        total = (process.env.TEST_MODE === "true") ? parseInt(1, 10) : parseInt(total, 10);
+        console.log(price);
+        console.log(total);
 
         if (type == "CL" || type == "BP") {
             photoShootPrice = parseInt(photoShootPrice, 10);
@@ -1098,6 +1102,22 @@ router.post("/send/mail/message", async (req, res) => {
         }
 
         logger.success(`Route: "${req.originalUrl || req.url}", userEmail: "${userEmail}", userName: "${userName}",Message: Registered`);
+        res.send({ Response: { Success: "1", Message: "Success" } })
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
+    }
+});
+
+
+router.post("/testing", async (req, res) => {
+    try {
+        
+        logger.success(`Route: `);
+        logger.error(`Route: `);
         res.send({ Response: { Success: "1", Message: "Success" } })
     } catch (error) {
         console.log(error)
