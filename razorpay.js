@@ -30,6 +30,11 @@ export async function createOrder(option) {
             return { success: true, order: order };
         } catch (error) {
 
+        //     updateParams = [razorpay_payment_status, razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
+        //         razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id, bookingStatus, formatedate, formatedate];
+        //     updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?,razorpay_error_code=?, razorpay_error_description=?, razorpay_error_source=?, razorpay_error_step=?,
+        // razorpay_error_reason=?, razorpay_error_order_id=?, razorpay_error_payment_id=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id=${razorpay_order_id} AND booking_id=${booking_id}`;
+
             logger.error(`Start RazorPay:`);
             logger.error(`Error Message: ${JSON.stringify(error)}`);
             logger.error(`options: ${JSON.stringify(options)}`);

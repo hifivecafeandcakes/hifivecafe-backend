@@ -100,7 +100,7 @@ router.post("/signin", async (req, res) => {
         }
 
         // console.log(req)
-        const signin = await executeQuery(`select * from users where email = ? `, [email], req.originalUrl || req.url);
+        const signin = await executeQuery(`select * from users where email = ? and status=?`, [email,'Active'], req.originalUrl || req.url);
         if (signin.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email Not Found", result: [] } }); }
 
 
@@ -111,8 +111,10 @@ router.post("/signin", async (req, res) => {
 
         if (email1 == email && password1 == password) {
             let result = [];
+            console.log("signin");
             console.log(signin);
             const encryptedData = encryptData(signin[0].name + "-" + signin[0].email + "-" + signin[0].id + "-" + signin[0].mobile);
+            console.log("encryptedData");
             console.log(encryptedData);
             // const data = decryptData(encryptedData)
             // console.log(data);
@@ -351,7 +353,7 @@ router.get("/reservation/category/subcategory", async (req, res) => {
         userid = userInfo.user_id;
         console.log(userid);
         console.log(req.body);
-        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 1], req.originalUrl || req.url); //check user exist in DB   
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 'Active'], req.originalUrl || req.url); //check user exist in DB   
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
         let objfile = {};
@@ -507,7 +509,7 @@ router.post("/reservation/booking/create", async (req, res) => {
         console.log(userid);
         console.log(req.body);
 
-        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 1], req.originalUrl || req.url); //check user exist in DB   
+        const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, "Active"], req.originalUrl || req.url); //check user exist in DB   
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
         let { reser_id, reser_catid, resersubcatid } = req.body;
@@ -620,6 +622,9 @@ router.post("/reservation/booking/create", async (req, res) => {
                         }
                     });
                 }
+
+                await executeQuery(`insert into reservation_booking_comments(booking_id,user_id,comment,status,created_at,updated_at)values(?,?,?,?,?,?)`, [reservationId, userid, '', bookingStatus, formatDate, formatDate], req.originalUrl || req.url);
+
                 // await mailbooking(reservationId, res)
                 let razorPayCreate = await createOrder({ amount: total, receipt: `BOOKID${reservationId}`.toString() })
 
@@ -699,7 +704,7 @@ router.post("/reservation/booking/update", async (req, res) => {
             razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
             razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id } = req.body;
 
-        const formatedate = new Date()
+        let formatedate = new Date()
 
         let bookingStatus = "Booked";
 
@@ -734,6 +739,8 @@ router.post("/reservation/booking/update", async (req, res) => {
                 logger.error(`End Route: "${req.originalUrl || req.url}"`);
                 return res.json({ Response: { Success: "0", Message: "Error in Update payment details" } });
             } else {
+
+                await executeQuery(`insert into reservation_booking_comments(booking_id,user_id,comment,status,created_at,updated_at)values(?,?,?,?,?,?)`, [booking_id, userid, '', bookingStatus, formatedate, formatedate], req.originalUrl || req.url);
 
                 let bookingInfo = await executeQuery(`SELECT * FROM reservation_booking WHERE booking_id = ?`, [booking_id], req.originalUrl || req.url);
                 if (bookingInfo.length > 0) {
@@ -1115,7 +1122,7 @@ router.post("/send/mail/message", async (req, res) => {
 
 router.post("/testing", async (req, res) => {
     try {
-        
+
         logger.success(`Route: `);
         logger.error(`Route: `);
         res.send({ Response: { Success: "1", Message: "Success" } })

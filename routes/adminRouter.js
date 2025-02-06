@@ -3,7 +3,7 @@ import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
 import { imageValidation } from '../validation.js';
 import { format } from 'date-fns'
-import { reg, generateToken } from '../helper.js';
+import { reg, generateToken, getQueryUsingTab, getQueryUsingUpcoming, getQueryUsingPast, getUserInfo } from '../helper.js';
 import { moveImage, moveVideo, deleteImage, deleteImageByValue, deleteVideoFile } from '../fileHandler.js';
 
 // routes/adminRouter.js
@@ -829,7 +829,7 @@ router.get("/category/select/:reser_id", async (req, res) => {
     const { reser_id } = req.params;
 
     let sql = `select * from reservation_category where status="Active" order by cat_id ASC`;
-    if (reser_id) {
+    if (reser_id != 0) {
         sql = `select * from reservation_category where status="Active" and reser_id=${reser_id} order by cat_id ASC`;
     }
 
@@ -839,6 +839,9 @@ router.get("/category/select/:reser_id", async (req, res) => {
         exesqlquery.map((item) => {
             result.push({ cat_id: item.cat_id, cat_title: item.cat_title })
         });
+        if (reser_id == 0) {
+            result = [];
+        }
         const response = { Response: { Success: "1", message: "Success", result: result } };
         return res.json(response);
     }
@@ -852,6 +855,10 @@ router.get("/category/select/:reser_id", async (req, res) => {
 //admin reservation list 
 router.post("/reservation/booking/list", async (req, res) => {
     try {
+
+        let { statusTab, upcomingTab, pastTab, reserId, CatID, customerID } = req.body;
+
+
         let reservationbookingsql = `SELECT 
             reservation_booking.booking_id, 
             reservation_booking.date, 
@@ -907,7 +914,64 @@ router.post("/reservation/booking/list", async (req, res) => {
         JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
         JOIN reservation ON reservation.reser_id = reservation_category.reser_id
         JOIN users ON users.id = reservation_booking.user_id
-        where reservation_sub_category.status = "Active" ORDER BY reservation_booking.date ASC`;
+        where reservation_sub_category.status = "Active"`;
+
+
+        let overAll = reservationbookingsql;
+        let forStatus = '';
+
+        if (statusTab !== "all") {
+            reservationbookingsql += ` AND reservation_booking.booking_status = '${statusTab}'`;
+        }
+
+        if (upcomingTab !== "") {
+            reservationbookingsql += await getQueryUsingUpcoming(upcomingTab);
+            forStatus += await getQueryUsingUpcoming(upcomingTab);
+        }
+
+        if (pastTab !== "") {
+            reservationbookingsql += await getQueryUsingPast(pastTab);
+            forStatus += await getQueryUsingPast(pastTab);
+        }
+
+
+
+        if (reserId !== "all" && reserId !== "" && reserId !== "0") {
+            reservationbookingsql += ` AND reservation_booking.reservation_id = '${reserId}'`;
+            forStatus += ` AND reservation_booking.reservation_id = '${reserId}'`;
+        }
+
+        if (CatID !== "all" && CatID !== "") {
+            reservationbookingsql += ` AND reservation_booking.reservation_catid = '${CatID}'`;
+            forStatus += ` AND reservation_booking.reservation_catid = '${CatID}'`;
+        }
+
+        if (customerID !== "all" && customerID !== "") {
+            reservationbookingsql += ` AND reservation_booking.user_id = '${customerID}'`;
+            forStatus += ` AND reservation_booking.user_id = '${customerID}'`;
+        }
+
+
+        reservationbookingsql += ` ORDER BY reservation_booking.date ASC`;
+        console.log(overAll);
+        console.log(forStatus);
+
+        let booked = await executeQuery(overAll + ` AND reservation_booking.booking_status = 'Booked'` + forStatus, [], req.originalUrl || req.url);
+        // console.log(booked);
+        let completed = await executeQuery(overAll + ` AND reservation_booking.booking_status = 'Completed'` + forStatus, [], req.originalUrl || req.url);
+        // console.log(completed);
+        let created = await executeQuery(overAll + ` AND reservation_booking.booking_status = 'Created'` + forStatus, [], req.originalUrl || req.url);
+        let cancelled = await executeQuery(overAll + ` AND reservation_booking.booking_status = 'Cancelled'` + forStatus, [], req.originalUrl || req.url);
+        let allStatus = await executeQuery(overAll + forStatus, [], req.originalUrl || req.url);
+        // console.log(booked);
+        // console.log(allStatus);
+        // console.log(forStatus);
+        let objfile = {};
+        objfile['booked'] = booked.length;
+        objfile['completed'] = completed.length;
+        objfile['created'] = created.length;
+        objfile['cancelled'] = cancelled.length;
+        objfile['allStatus'] = allStatus.length;
 
         const executereservationbookingsql = await executeQuery(reservationbookingsql, [], req.originalUrl || req.url)
 
@@ -953,6 +1017,7 @@ router.post("/reservation/booking/list", async (req, res) => {
 
                     // booking
                     booking_id: "BOOKID" + item.booking_id,
+                    booking_item_id: item.booking_id,
                     booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
                     booking_time: item.time,
                     booking_time_slot: item.time_slot,
@@ -999,8 +1064,223 @@ router.post("/reservation/booking/list", async (req, res) => {
                     user_mobile: item.mobile,
                 };
             });
-            // objfile['reservation_booking'] = result;
-            // objfile['user'] = userResult;
+
+            objfile['reservation_booking'] = result;
+
+            res.send({ Response: { Success: "1", Message: "Success", Result: objfile } })
+        } else {
+            objfile['reservation_booking'] = [];
+            console.log(objfile);
+            res.send({ Response: { Success: "0", Message: "NO Records", Result: objfile } });
+        }
+    } catch (error) {
+        return res.status(500).json({ success: '0', message: error.message, Result: [] });
+    }
+})
+
+
+//admin reservation list 
+router.get("/reservation/booking/get/:booking_id", async (req, res) => {
+
+    try {
+
+        let { booking_id } = req.params;
+
+        console.log(booking_id);
+
+        let reservationbookingsql = `SELECT 
+            reservation_booking.booking_id, 
+            reservation_booking.date, 
+            reservation_booking.time,
+            reservation_booking.time_slot, 
+            reservation_booking.total_people, 
+            reservation_booking.menu_type, 
+            reservation_booking.veg_or_nonveg, 
+            reservation_booking.guest_name, 
+            reservation_booking.guest_whatsapp, 
+            reservation_booking.cake, 
+            reservation_booking.cake_msg, 
+            reservation_booking.cake_weight, 
+            reservation_booking.cake_shape, 
+            reservation_booking.cakeShapePrice, 
+            reservation_booking.booking_status, 
+            reservation_booking.razorpay_payment_status, 
+            reservation_booking.razorpay_payment_amount, 
+            reservation_booking.reservation_sub_catid,
+            reservation_booking.comment,
+            reservation_booking.photoShoot, 
+            reservation_booking.photoShootPrice, 
+            reservation_booking.photoPrint, 
+            reservation_booking.photoPrintPrice, 
+            reservation_booking.flowerPrice,
+            reservation_booking.flower, 
+            reservation_booking.firePrice,
+            reservation_booking.fire,
+            reservation_booking.balloon_theme,
+            reservation_booking.is_led,
+            reservation_booking.ledName,
+            reservation_booking.led,
+            reservation_booking.ledPrice,
+            reservation_booking.is_age,
+            reservation_booking.ageName,
+            reservation_booking.age,
+            reservation_booking.agePrice,
+            reservation_booking.amount, 
+            reservation_booking.total_amount, 
+            reservation_booking.comment,
+            users.name as username,
+            users.email as email,
+            users.mobile as mobile,
+
+            reservation_sub_category.*,
+            reservation_booking.created_at,
+            reservation.reser_main_title,
+            reservation.description,
+            reservation.reser_code,
+            reservation_category.cat_title,
+            reservation_category.cat_image
+        from reservation_booking JOIN reservation_sub_category ON reservation_sub_category.reser_sub_id = reservation_booking.reservation_sub_catid
+        JOIN reservation_category ON reservation_category.cat_id = reservation_sub_category.reser_cat_id
+        JOIN reservation ON reservation.reser_id = reservation_category.reser_id
+        JOIN users ON users.id = reservation_booking.user_id
+        where reservation_sub_category.status = "Active" AND reservation_booking.booking_id=${booking_id}`;
+
+        // JOIN reservation_booking_comments ON reservation_booking_comments.booking_id = reservation_booking.booking_id
+
+
+        const executereservationbookingsql = await executeQuery(reservationbookingsql, [], req.originalUrl || req.url)
+
+        console.log(executereservationbookingsql);
+
+        if (executereservationbookingsql.length > 0) {
+            const result = await Promise.all(executereservationbookingsql.map(async (item) => {
+                console.log(item.booking_id);
+
+                const extraImages = (item.sub_extra_img != "" && item.sub_extra_img != null && item.sub_extra_img != "null") ? JSON.parse(item.sub_extra_img).map(imageName => baseImageUrl + imageName) : [];
+                const veg_images = (item.veg_images != "" && item.veg_images != null && item.veg_images != "null") ? JSON.parse(item.veg_images).map(imageName => baseImageUrl + imageName) : [];
+                const nonveg_images = (item.nonveg_images != "" && item.nonveg_images != null && item.nonveg_images != "null") ? JSON.parse(item.nonveg_images).map(imageName => baseImageUrl + imageName) : [];
+
+                let veg_menus = (item.veg_menus && item.veg_menus != "" && item.veg_menus != null) ? Object.keys(JSON.parse(item.veg_menus))
+                    .map(key => JSON.parse(item.veg_menus)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(veg_menus);
+
+                let nonveg_menus = (item.nonveg_menus && item.nonveg_menus != "" && item.nonveg_menus != null) ? Object.keys(JSON.parse(item.nonveg_menus))
+                    .map(key => JSON.parse(item.nonveg_menus)[key])           // Get values
+                    .filter(value => value) : [];
+                console.log(nonveg_menus);
+
+                let admin_status_comment_query = `SELECT 
+                                            reservation_booking_comments.status, 
+                                            reservation_booking_comments.comment,
+                                            DATE_FORMAT(reservation_booking_comments.created_at, '%d-%m-%Y %h:%i %p') as created_at,
+                                            admin_users.id as admin_id,
+                                            admin_users.name as name,
+                                            admin_users.mobile as mobile from reservation_booking_comments
+                                            JOIN admin_users 
+                                            ON admin_users.id = reservation_booking_comments.admin_id 
+                                            WHERE reservation_booking_comments.booking_id=${item.booking_id}`;
+                const admin_executeStatusCommentsql = await executeQuery(admin_status_comment_query, [], req.originalUrl || req.url)
+
+                let admin_status_comments = {};
+
+                if (admin_executeStatusCommentsql.length > 0) {
+                    admin_status_comments = admin_executeStatusCommentsql;
+                }
+
+                let customer_status_comment_query = `SELECT 
+                                            reservation_booking_comments.status, 
+                                            reservation_booking_comments.comment,
+                                            DATE_FORMAT(reservation_booking_comments.created_at, '%d-%m-%Y %h:%i %p') as created_at,
+                                            users.name as name,
+                                            users.id as customer_id,
+                                            users.mobile as mobile
+                                            from reservation_booking_comments
+                                            JOIN users 
+                                            ON users.id = reservation_booking_comments.user_id 
+                                            WHERE reservation_booking_comments.booking_id=${item.booking_id}`;
+                const customer_executeStatusCommentsql = await executeQuery(customer_status_comment_query, [], req.originalUrl || req.url)
+
+                let customer_status_comments = {};
+
+                if (customer_executeStatusCommentsql.length > 0) {
+                    customer_status_comments = customer_executeStatusCommentsql;
+                }
+
+                return {
+                    reser_sub_id: item.reser_sub_id,
+                    sub_tilte: item.sub_tilte,
+                    reser_id: item.reser_id,
+                    sub_img: baseImageUrl + item.sub_img,
+                    reser_id: item.reser_id,
+                    reser_cat_id: item.reser_cat_id,
+                    sub_extra_img: extraImages,
+                    veg_images: veg_images,
+                    veg_menus: veg_menus,
+                    nonveg_menus: nonveg_menus,
+                    nonveg_images: nonveg_images,
+                    sub_cat_price_range: item.sub_cat_price_range,
+                    status: item.status,
+                    created_at: item.created_at,
+                    updated_at: item.updated_at,
+
+                    reser_main_title: item.reser_main_title,
+                    reser_code: item.reser_code,
+                    description: item.description,
+                    cat_title: item.cat_title,
+                    cat_image: baseImageUrl + item.cat_image,
+
+                    // booking
+                    booking_id: "BOOKID" + item.booking_id,
+                    booking_item_id: item.booking_id,
+                    booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
+                    booking_time: item.time,
+                    booking_time_slot: item.time_slot,
+                    booking_total_people: item.total_people,
+                    booking_menu_type: item.menu_type,
+                    booking_veg_or_nonveg: item.veg_or_nonveg,
+                    booking_guest_name: item.guest_name,
+                    booking_guest_whatsapp: item.guest_whatsapp,
+                    booking_cake: item.cake,
+                    booking_cake_msg: item.cake_msg,
+                    booking_cake_weight: item.cake_weight,
+                    booking_cake_shape: item.cake_shape,
+                    booking_cakeShapePrice: item.cakeShapePrice,
+                    booking_status: item.booking_status,
+                    booking_payment_status: item.razorpay_payment_status,
+                    booking_payment_amount: item.razorpay_payment_amount,
+                    remarks: item.comment,
+                    amount: item.amount,
+                    total_amount: item.total_amount,
+                    photoShoot: item.photoShoot,
+                    photoShootPrice: item.photoShootPrice,
+                    photoPrint: item.photoPrint,
+                    photoPrintPrice: item.photoPrintPrice,
+                    flower: item.flower,
+                    flowerPrice: item.flowerPrice,
+
+                    firePrice: item.firePrice,
+                    fire: item.fire,
+                    balloon_theme: item.balloon_theme,
+                    is_led: item.is_led,
+                    ledName: item.ledName,
+                    led: item.led,
+                    ledPrice: item.ledPrice,
+                    is_age: item.is_age,
+                    ageName: item.ageName,
+                    age: item.age,
+                    agePrice: item.agePrice,
+
+                    remarks: item.comment,
+                    booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:mm:ss'),
+                    // user
+                    user_name: item.username,
+                    user_email: item.email,
+                    user_mobile: item.mobile,
+                    admin_status_comments: admin_status_comments,
+                    customer_status_comments: customer_status_comments,
+                };
+            }));
 
             res.send({ Response: { Success: "1", Message: "Success", Result: result } })
         } else {
@@ -1012,54 +1292,107 @@ router.post("/reservation/booking/list", async (req, res) => {
 })
 
 
-//admin reservation list 
-router.get("/reservation/booking/get:booking_id", async (req, res) => {
+//admin reservation booking update status and comment 
+router.post("/reservation/booking/update", async (req, res) => {
+    try {
+        let { booking_id, user_id, status, comment } = req.body;
 
-    let sql = `select reservation_booking.*, reservation_sub_category.reser_sub_id as reser_sub_id, reservation_sub_category.sub_tilte as sub_tilte, reservation_category.reser_cat_id as reser_cat_id, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_main_title, reservation.reser_title as reser_title, reservation.reser_id as reser_id from reservation_booking LEFT JOIN reservation_sub_category ON reservation_sub_category.reser_cat_id = reservation_booking.reservation_sub_catid LEFT JOIN reservation_category ON reservation_category.reser_id = reservation_booking.reservation_catid LEFT JOIN reservation ON reservation.reser_id = reservation_booking.reservation_id where reservation_booking.booking_id=${booking_id} order by reservation_booking.booking_id DESC`
+        const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`, [], req.originalUrl || req.url)
+        if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
+
+        let formattedDate = new Date();
+
+        let userInfo = await getUserInfo(user_id);
+        if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
+
+        user_id = userInfo.user_id;
+        console.log(user_id);
+
+
+
+        if (res_booking.booking_status != status) {
+            const update_sql = `UPDATE reservation_booking SET booking_status=?, updated_at = ? WHERE booking_id = ?`;
+            const update_sqlValues = [status, formattedDate, booking_id];
+            const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
+            if ((update.changedRows != 1)) {
+                return res.send({ Response: { Success: '0', message: "Reservation status Updated unsuccessfully!" } });
+            }
+        }
+
+        const registerComment = await executeQuery(`insert into reservation_booking_comments(booking_id,admin_id,comment,status,created_at,updated_at)values(?,?,?,?,?,?)`, [booking_id, user_id, comment, status, formattedDate, formattedDate], req.originalUrl || req.url);
+        if (registerComment.length <= 0) { return res.send({ Response: { success: '0', message: "Status updated Unsuccessfully", result: [] } }); }
+
+
+        return res.send({ Response: { Success: '1', message: "Status updated successfully!", result: [] } });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ Response: { Success: '0', message: error.message } });
+    }
+});
+
+
+//admin reservation update 
+// router.post("/reservation/booking/get:booking_id", async (req, res) => {
+//     try {
+//         const { booking_id, status, comment } = req.body;
+
+//         const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`, [], req.originalUrl || req.url)
+//         if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
+
+
+//         const formattedDate = new Date();
+//         const update_sql = `UPDATE reservation_booking SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
+//         const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
+//         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
+//         if ((update.changedRows == 1)) {
+//             return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
+//         }
+//         return res.send({ Response: { Success: '0', message: "Reservation sub category Updated Unsuccessfully!", result: [] } });
+//     } catch (error) {
+//         console.log(error);
+//         return res.status(500).json({ Response: { Success: '0', message: error.message } });
+//     }
+// });
+
+
+router.get("/customer/select", async (req, res) => {
+    const exesqlquery = await executeQuery(`select * from users where status=1 order by id ASC`, [], req.originalUrl || req.url)
+    let result = [];
+    if (exesqlquery.length > 0) {
+        exesqlquery.map((item) => {
+            result.push({ id: item.id, name: item.name + "-" + item.mobile })
+        });
+        const response = { Response: { Success: "1", message: "Success", result: result } };
+        return res.json(response);
+    }
+    else {
+        const response = { Response: { Success: "0", message: "No Records!", result: [] } };
+        return res.json(response);
+    }
+})
+
+
+//admin customer list 
+router.get("/customer/list", async (req, res) => {
+    let sql = `select * from users order by id ASC`
+
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 
     if (exesqlquery.length > 0) {
 
+        const firstimgurl = baseImageUrl;
+
         const result = exesqlquery.map((item) => {
             return {
-                reser_sub_id: item.reser_sub_id,
-                sub_tilte: item.sub_tilte,
-                reser_cat_id: item.reser_cat_id,
-                reser_cat_title: item.cat_title,
-                reser_id: item.reser_id,
-                reser_title: item.reser_title,
-
-                reservation_booking_id: item.booking_id,
-                booking_id: "BOOKID" + item.booking_id,
-                booking_date: format(new Date(item.date), 'yyyy-MM-dd'),
-                booking_time: item.time,
-                booking_total_people: item.total_people,
-                booking_remarks: item.remarks,
-                booking_amount: item.amount,
-                booking_total_amount: item.total_amount,
-                booking_status: item.booking_status,
-
-                booking_menu_type: item.menu_type,
-                booking_veg_or_nonveg: item.veg_or_nonveg,
-                booking_guest_name: item.guest_name,
-                booking_cake: item.cake,
-                booking_cake_msg: item.cake_msg,
-                booking_cake_weight: item.cake_weight,
-                booking_cake_shape: item.cake_shape,
-
-                booking_payment_status: item.razorpay_payment_status,
-                booking_payment_amount: item.razorpay_payment_amount,
-
-                booking_photoShoots: item.photoShoots,
-                booking_photoShootPrices: item.photoShootPrices,
-                booking_photoPrints: item.photoPrints,
-                booking_photoPrintPrices: item.photoPrintPrices,
-                booking_flowers: item.flowers,
-                booking_flowersPrices: item.flowersPrices,
-
-                booking_created_at: format(new Date(item.created_at), 'yyyy-MM-dd HH:mm:ss'),
-                booking_updated_at: format(new Date(item.updated_at), 'yyyy-MM-dd HH:mm:ss'),
-
+                id: item.id,
+                name: item.name,
+                email: item.email,
+                mobile: item.mobile,
+                profile_image: firstimgurl + item.profile_img,
+                address: item.address,
+                status: item.status,
+                created_at: item.created_at,
+                updated_at: item.updated_at,
             };
         });
         const response = { Response: { Success: "1", message: "Success", result: result } };
@@ -1072,28 +1405,194 @@ router.get("/reservation/booking/get:booking_id", async (req, res) => {
 })
 
 
-//admin reservation update 
-router.post("/reservation/booking/get:booking_id", async (req, res) => {
+router.get("/customer/get/:id", async (req, res) => {
+    const { id } = req.params;
+    let sql = `select * from users where id=${id}`
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
+
+    if (exesqlquery.length > 0) {
+
+        const firstimgurl = baseImageUrl;
+
+        const result = exesqlquery.map((item) => {
+            return {
+                id: item.id,
+                name: item.name,
+                email: item.email,
+                mobile: item.mobile,
+                // profile_image: firstimgurl + item.profile_img,
+                address: item.address,
+                status: item.status,
+                created_at: item.created_at,
+                updated_at: item.updated_at,
+            };
+        });
+        let response = { Response: { Success: "1", message: "Success", result: result } };
+        return res.json(response);
+    }
+    else {
+        let response = { Response: { Success: "0", message: "No Records!", result: [] } };
+        return res.json(response);
+    }
+})
+
+
+//admin customer add 
+router.post("/customer/add", async (req, res) => {
     try {
-        const { booking_id, status, comment } = req.body;
+        // console.log(req.files);
+        const name = req.body.name;
+        let password = req.body.password;
+        const email = req.body.email;
+        const status = req.body.status;
+        const phone_number = req.body.mobile;
+        const currentdate = new Date();
 
-        const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`, [], req.originalUrl || req.url)
-        if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
+        const profile_img = req.files && req.files.profile_img ? req.files.profile_img : null;
 
-
-        const formattedDate = new Date();
-        const update_sql = `UPDATE reservation_booking SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
-        const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
-        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
-        if ((update.changedRows == 1)) {
-            return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
+        if (profile_img) {
+            await imageValidation(profile_img);
+            // Move and handle main image
+            const imageUrl = await moveImage(profile_img);
+            console.log("imageUrl");
+            console.log(imageUrl);
         }
-        return res.send({ Response: { Success: '0', message: "Reservation sub category Updated Unsuccessfully!", result: [] } });
+        // Insert data into MySQL table
+        const register = await executeQuery(`insert into users(name,mobile,email,status, profile_img,created_at)values(?,?,?,?,?)`, [name, phone_number, email, status, profile_img, currentdate], req.originalUrl || req.url);
+        if (register.length <= 0) { return res.send({ Response: { Success: '0', Message: "Customer Register unsuccessfully", result: [] } }); }
+
+        return res.send({ Response: { Success: '1', message: "Customer category added successfully!", result: [] } });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ Response: { Success: '0', message: error.message } });
     }
 });
+
+
+//admin customer update 
+router.post("/customer/update", async (req, res) => {
+    try {
+        console.log(req.body);
+        const id = req.body.id;
+        const name = req.body.name;
+        let password = req.body.password;
+        const email = req.body.email;
+        const status = req.body.status;
+        const phone_number = req.body.mobile;
+        const currentdate = new Date();
+
+        const profile_img = req.files && req.files.profile_img ? req.files.profile_img : null;
+
+
+        const user_rec = await executeQuery(`select * from users where id=${id}`, [], req.originalUrl || req.url)
+        if (user_rec.length <= 0) { return res.json({ Response: { Success: '0', message: "Customer Record Not Found" } }); }
+        // Validate required fields
+        if (!name || !email || !phone_number) { return res.json({ Response: { Success: '0', message: "Customer name, email and mobile are required!" } }); }
+
+        let imageUrl = user_rec[0].profile_img;
+        if (profile_img != null && profile_img != "") {
+            await deleteImage("users", "profile_img", id, "profile_img");
+            await imageValidation(profile_img);
+            imageUrl = await moveImage(profile_img);
+        }
+
+
+        const formattedDate = new Date();
+        const update_sql = `UPDATE users SET name = ?, mobile = ?, email = ?, status= ?, profile_img=?, updated_at = ? WHERE id = ?`
+        const update_sqlValues = [name, phone_number, email, status, profile_img, formattedDate, id];
+        const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
+        if ((update.changedRows == 1)) {
+            return res.send({ Response: { Success: '1', message: "Customer Updated successfully!", result: [] } });
+        }
+        return res.send({ Response: { Success: '0', message: "Customer Updated Unsuccessfully!", result: [] } });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ Response: { Success: '0', message: error.message } });
+    }
+});
+
+
+router.get("/customer/delete/:id", async (req, res) => {
+    const { id } = req.params;
+    let sql = `select * from users where id=${id}`
+    const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
+    if (deletingRecord.length <= 0) {
+        let response = { Response: { Success: "0", message: "No Records found!", result: [] } };
+        return res.json(response);
+    }
+
+    let profile_img = deletingRecord[0].profile_img;
+
+    console.log(profile_img);
+
+    if (profile_img != "" && profile_img != null) {
+        await deleteImage("users", "profile_img", id, "profile_img");
+    }
+
+
+    const deleting = await executeQuery(`delete from users where id=${id}`, [], req.originalUrl || req.url)
+    // console.log(deleting);
+    if (deleting?.affectedRows == 1) {
+        return res.json({ Response: { Success: "1", message: "Success" } });
+    } else {
+        return res.json({ Response: { Success: "0", message: "Error" } });
+    }
+})
+
+
+
+//admin customer list 
+router.get("/dashboard", async (req, res) => {
+    let result = {};
+
+
+    let customerActiveCount = await executeQuery(`select count(*) as count from users where status='Active'`, [], req.originalUrl || req.url);
+    let customerInactiveCount = await executeQuery(`select count(*) as count from users where status='Inactive'`, [], req.originalUrl || req.url);
+
+    let tableActiveCount = await executeQuery(`select count(*) as count from reservation_sub_category where status='Active'`, [], req.originalUrl || req.url);
+    let tableInactiveCount = await executeQuery(`select count(*) as count from reservation_sub_category where status='Inactive'`, [], req.originalUrl || req.url);
+
+
+
+    let todayBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('Today'), [], req.originalUrl || req.url);
+    let tommorowBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('Tomorrow'), [], req.originalUrl || req.url);
+    let onweekBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('Oneweek'), [], req.originalUrl || req.url);
+    let onemonthBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('Onemonth'), [], req.originalUrl || req.url);
+    let upcomingBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('upcoming'), [], req.originalUrl || req.url);
+
+    
+    result.customerActiveCount = (customerActiveCount.length > 0) ? customerActiveCount[0].count : 0;
+    result.customerInactiveCount = (customerInactiveCount.length > 0) ? customerInactiveCount[0].count : 0;
+    result.tableActiveCount = (tableActiveCount.length > 0) ? tableActiveCount[0].count : 0;
+    result.tableInactiveCount = (tableInactiveCount.length > 0) ? tableInactiveCount[0].count : 0;
+    result.todayBookingCount = (todayBookingCount.length > 0) ? todayBookingCount[0].count : 0;
+    result.tommorowBookingCount = (tommorowBookingCount.length > 0) ? tommorowBookingCount[0].count : 0;
+    result.onweekBookingCount = (onweekBookingCount.length > 0) ? onweekBookingCount[0].count : 0;
+    result.onemonthBookingCount = (onemonthBookingCount.length > 0) ? onemonthBookingCount[0].count : 0;
+    result.upcomingBookingCount = (upcomingBookingCount.length > 0) ? upcomingBookingCount[0].count : 0;
+
+    console.log(result);
+
+    const response = { Response: { Success: "1", message: "Success", result: result } };
+    return res.json(response);
+
+})
+
+
+router.get("/notification", async (req, res) => {
+    let result = {};
+
+
+    let notificationBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1 AND (DATE(reservation_booking.created_at) = CURRENT_DATE())`, [], req.originalUrl || req.url);
+
+    result.notificationBookingCount = (notificationBookingCount.length > 0) ? notificationBookingCount[0].count : 0;
+
+    console.log(result);
+
+    const response = { Response: { Success: "1", message: "Success", result: result } };
+    return res.json(response);
+
+})
 
 
 export default router;

@@ -59,9 +59,44 @@ export async function getQueryUsingTab(tabActive) {
     let query = '';
     if (tabActive == "Booked") {
         // query = ` AND reservation_booking.date > CURRENT_DATE()`;
-        query = ` AND (reservation_booking.date > CURRENT_DATE() AND reservation_booking.booking_status = '${tabActive}')` ;
+        query = ` AND (reservation_booking.date > CURRENT_DATE() AND reservation_booking.booking_status = '${tabActive}')`;
     } else if (tabActive == "Completed") {
         query = ` AND (reservation_booking.date < CURRENT_DATE() OR reservation_booking.booking_status = '${tabActive}')`;
+    }
+    return query;
+}
+
+
+export async function getQueryUsingUpcoming(parm) {
+    let query = '';
+    if (parm == "Today") {
+        query = ` AND (reservation_booking.date = CURRENT_DATE())`;
+    } else if (parm == "Tomorrow") {
+        query = ` AND (reservation_booking.date = CURRENT_DATE() + INTERVAL 1 DAY)`;
+    } else if (parm == "Oneweek") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 1 DAY AND CURRENT_DATE() + INTERVAL 7 DAY)`;
+    } else if (parm == "Twoweek") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 1 DAY AND CURRENT_DATE() + INTERVAL 14 DAY)`;
+    } else if (parm == "Onemonth") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 1 DAY AND CURRENT_DATE() + INTERVAL 1 month)`;
+    } else {
+        query = ` AND (reservation_booking.date >= CURRENT_DATE())`;
+    }
+    return query;
+}
+
+export async function getQueryUsingPast(parm) {
+    let query = '';
+    if (parm == "Yesterday") {
+        query = ` AND (reservation_booking.date = CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (parm == "Oneweek") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 7 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (parm == "Twoweek") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 14 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (parm == "Onemonth") {
+        query = ` AND (reservation_booking.date BETWEEN CURRENT_DATE() - INTERVAL 1 MONTH AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else {
+        query = ` AND (reservation_booking.date <= CURRENT_DATE())`;
     }
     return query;
 }
