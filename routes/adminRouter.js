@@ -6,6 +6,8 @@ import { format } from 'date-fns'
 import { reg, generateToken, getQueryUsingTab, getQueryUsingUpcoming, getQueryUsingPast, getUserInfo } from '../helper.js';
 import { moveImage, moveVideo, deleteImage, deleteImageByValue, deleteVideoFile } from '../fileHandler.js';
 
+import logger from '../logger.js';
+
 // routes/adminRouter.js
 import express from 'express';
 const router = express.Router();
@@ -55,6 +57,9 @@ router.get("/register", async (req, res) => {
     }
     catch (error) {
         console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Admin Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
         return res.status(500).json({ success: '0', message: error.message, result: [] });
     }
 })
@@ -110,6 +115,9 @@ router.post("/login/token", async (req, res) => {
     }
     catch (error) {
         console.log(error);
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Admin Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
         return res.status(500).json({ success: '0', message: error.message, result: [] });
     }
 })
@@ -1560,7 +1568,7 @@ router.get("/dashboard", async (req, res) => {
     let onemonthBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('Onemonth'), [], req.originalUrl || req.url);
     let upcomingBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('upcoming'), [], req.originalUrl || req.url);
 
-    
+
     result.customerActiveCount = (customerActiveCount.length > 0) ? customerActiveCount[0].count : 0;
     result.customerInactiveCount = (customerInactiveCount.length > 0) ? customerInactiveCount[0].count : 0;
     result.tableActiveCount = (tableActiveCount.length > 0) ? tableActiveCount[0].count : 0;
