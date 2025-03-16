@@ -110,6 +110,7 @@ router.post("/login/token", async (req, res) => {
             return res.send({ Response: { success: '1', message: "Logged in Successfully", result: result } });
         }
         else {
+            logger.error(`Admin Route: "${req.originalUrl || req.url}", Error: Email or Password Not Registered`);
             return res.send({ Response: { success: '0', message: "Email or Password Not Registered", result: [] } });
         }
     }
@@ -1364,7 +1365,7 @@ router.post("/reservation/booking/update", async (req, res) => {
 
 
 router.get("/customer/select", async (req, res) => {
-    const exesqlquery = await executeQuery(`select * from users where status=1 order by id ASC`, [], req.originalUrl || req.url)
+    const exesqlquery = await executeQuery(`select * from users where status='Active' order by id ASC`, [], req.originalUrl || req.url)
     let result = [];
     if (exesqlquery.length > 0) {
         exesqlquery.map((item) => {
@@ -1382,7 +1383,7 @@ router.get("/customer/select", async (req, res) => {
 
 //admin customer list 
 router.get("/customer/list", async (req, res) => {
-    let sql = `select * from users order by id ASC`
+    let sql = `select * from users order by id DESC`
 
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
 

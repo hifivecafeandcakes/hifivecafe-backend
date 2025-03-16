@@ -100,7 +100,7 @@ router.post("/signin", async (req, res) => {
         }
 
         // console.log(req)
-        const signin = await executeQuery(`select * from users where email = ? and status=?`, [email,'Active'], req.originalUrl || req.url);
+        const signin = await executeQuery(`select * from users where email = ? and status=?`, [email, 'Active'], req.originalUrl || req.url);
         if (signin.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email Not Found", result: [] } }); }
 
 
@@ -653,7 +653,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                         return res.json({ Response: { Success: "0", Message: "Order ID Update failed" } });
                     } else {
 
-                        logger.success(`Created Route: ${req.originalUrl || req.url}, booking_id:${reservationId}`);
+                        logger.success(`Created Order Route: ${req.originalUrl || req.url}, booking_id:${reservationId}`);
 
                         return res.json({
                             Response: {
@@ -685,8 +685,10 @@ router.post("/reservation/booking/create", async (req, res) => {
 router.post("/reservation/booking/update", async (req, res) => {
     try {
 
+        console.log("req.body");
         console.log(req.body);
-        const { razorpay_payment_status, booking_id, razorpay_payment_id } = req.body;
+        console.log("req.body1");
+        const { razorpay_payment_status, booking_id, razorpay_payment_id, razorpay_order_id } = req.body;
         let { userid } = req.body;
 
         let userInfo = await getUserInfo(userid);
@@ -695,12 +697,21 @@ router.post("/reservation/booking/update", async (req, res) => {
 
         if (!userid) { return res.send({ Response: { Success: '0', Message: "User ID is required!", } }); }
         if (!booking_id) { return res.send({ Response: { Success: '0', Message: "Booking ID is required!", } }); }
-        if (!razorpay_payment_id) { return res.send({ Response: { Success: '0', Message: "Payment ID Id is required!", } }); }
+
+
+
+        if (!razorpay_order_id) {
+            console.log("razorpay_order_id");
+            console.log(razorpay_order_id);
+            logger.error(`Razorpay Update Error: razorpay_order_id not made for booking id ${booking_id}`);
+
+            return res.send({ Response: { Success: '0', Message: "razorpay_order_id is required!", } });
+        }
 
         const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? `, [userid], req.originalUrl || req.url); //check user exist in DB   
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Please Signup!", } }); }
 
-        const { razorpay_order_id, razorpay_signature,
+        const { razorpay_signature,
             razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
             razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id } = req.body;
 
@@ -708,33 +719,46 @@ router.post("/reservation/booking/update", async (req, res) => {
 
         let bookingStatus = "Booked";
 
+        if (razorpay_payment_status == "error") {
+            bookingStatus = "Created";
+            let updateParamsErr = [razorpay_payment_status, razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
+                razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id, bookingStatus, formatedate, formatedate, razorpay_order_id, booking_id];
+            let updateSQLErr = `UPDATE reservation_booking SET razorpay_payment_status=?,razorpay_error_code=?, razorpay_error_description=?, razorpay_error_source=?, razorpay_error_step=?,
+        razorpay_error_reason=?, razorpay_error_order_id=?, razorpay_error_payment_id=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id=? AND booking_id=?`;
+            await executeQuery(updateSQLErr, updateParamsErr, req.originalUrl || req.url);
+            logger.error(`Razorpay payment status Updating Error Info: razorpay_error_code-${razorpay_error_code}, razorpay_error_description-${razorpay_error_description}, razorpay_error_reason-${razorpay_error_reason}`);
+        }
+
+        if (!razorpay_payment_id) {
+            console.log("razorpay_payment_id");
+            console.log(razorpay_payment_id);
+            logger.error(`Razorpay Update Error: razorpay_payment_id not made booking id ${booking_id}`);
+
+            return res.send({ Response: { Success: '0', Message: "Payment ID Id is required!", } });
+        }
+
+
         let paymentDetails = await fetchPaymentDetails(razorpay_payment_id);
 
+        console.log("paymentDetails");
         console.log(paymentDetails);
 
         let updateParams = [razorpay_payment_status, paymentDetails.amount / 100, JSON.stringify(paymentDetails), razorpay_payment_id, razorpay_signature, bookingStatus, formatedate, formatedate];
         let updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?, razorpay_payment_amount=?, razorpay_payment_detail=?, razorpay_payment_id=?, razorpay_signature=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id='${razorpay_order_id}' AND booking_id=${booking_id} AND booking_status='Created'`;
 
-        if (razorpay_payment_status == "error") {
-            updateParams = [razorpay_payment_status, razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
-                razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id, bookingStatus, formatedate, formatedate];
-            updateSQL = `UPDATE reservation_booking SET razorpay_payment_status=?,razorpay_error_code=?, razorpay_error_description=?, razorpay_error_source=?, razorpay_error_step=?,
-        razorpay_error_reason=?, razorpay_error_order_id=?, razorpay_error_payment_id=?, booking_status=?, razorpay_payment_at=?, updated_at=? WHERE razorpay_order_id=${razorpay_order_id} AND booking_id=${booking_id}`;
-        }
-
         //Update razorpay_payment_id, razorpay_signature
         con.query(updateSQL, updateParams, async (Error, result) => {
             if (Error) {
                 console.log(Error)
-                logger.error(`Start Route: "${req.originalUrl || req.url}"`);
-                logger.error(`MySQL Error: ${Error.message}`);
-                logger.error(`SQL Query: ${updateSQL}`);
-                logger.error(`Values: ${JSON.stringify(updateParams)}`);
+                logger.error(`Start Route  booking id ${booking_id}: "${req.originalUrl || req.url}"`);
+                logger.error(`MySQL Error  booking id ${booking_id}: ${Error.message}`);
+                logger.error(`SQL Query  booking id ${booking_id}: ${updateSQL}`);
+                logger.error(`Values booking id ${booking_id}: ${JSON.stringify(updateParams)}`);
 
                 let stackLines = Error.stack?.split('\n') || [];
                 let errorLine = stackLines[1]?.trim();
                 if (errorLine) {
-                    logger.error(`Error occurred at: ${errorLine}`);
+                    logger.error(`Error occurred at booking id ${booking_id}: ${errorLine}`);
                 }
                 logger.error(`End Route: "${req.originalUrl || req.url}"`);
                 return res.json({ Response: { Success: "0", Message: "Error in Update payment details" } });
@@ -1072,6 +1096,43 @@ router.post("/reset-password", async (req, res) => {
         const errorLine = stackLines[1]?.trim();
         logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
         res.send({ Response: { Success: "0", Message: "Email not valid, please contact Hifive" } })
+    }
+});
+
+//track visitor
+router.post("/track/visitor", async (req, res) => {
+    try {
+        let { ip, browser, page, userid } = req.body;
+
+        let user_name = null;
+        let user_email = null;
+        let user_mobile = null;
+        const currentdate = new Date();
+        console.log(ip);
+        console.log(browser);
+        console.log(page);
+        if (userid && userid != null && userid != "") {
+            let userInfo = await getUserInfo(userid);
+            console.log(userInfo);
+            user_name = userInfo.user_name;
+            user_email = userInfo.user_email;
+            user_mobile = userInfo.user_mobile;
+        }
+
+        const visitor = await executeQuery(`INSERT INTO visitors (ip, browser,page,user_name,user_email,user_mobile,timestamp) VALUES (?, ?,?,?,?,?,?)`, [ip, browser, page, user_name, user_email, user_mobile, currentdate], req.originalUrl || req.url);
+        if (visitor.length <= 0) {
+            logger.error(`Visitor IP: ${ip} Route: ${req.originalUrl || req.url}`);
+            return res.send({ Response: { Success: '0', Message: "Visitor not inserted!", } });
+        }
+
+        logger.success(`Visitor IP: ${ip} Route: ${req.originalUrl || req.url}`);
+        res.send({ Response: { Success: "1", Message: "Visitor Inserted successfully", Result: [] } });
+    } catch (error) {
+        console.log(error)
+        const stackLines = error.stack.split('\n'); // Split the stack into lines
+        const errorLine = stackLines[1]?.trim();
+        logger.error(`Route: "${req.originalUrl || req.url}", Error: ${error.message}, ErrorLine: ${errorLine}`);
+        return res.status(500).json({ Success: '0', Message: error.message, Result: [] });
     }
 });
 

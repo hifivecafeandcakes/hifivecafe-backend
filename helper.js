@@ -31,12 +31,10 @@ export async function getUserInfo(v) {
     try {
         let res = decryptData(v);
         let res_arr = res.split("-");
-        console.log(res_arr);
         if (res_arr <= 0) {
             return null;
         }
         let result = { user_name: res_arr[0], user_email: res_arr[1], user_id: res_arr[2], user_mobile: res_arr[3], ENCRYPT_KEY: res_arr[4] }
-        console.log(result);
         return result;
     } catch (error) {
         return null;

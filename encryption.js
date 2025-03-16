@@ -25,8 +25,8 @@ const encryptionIV = crypto
 
 // Encrypt data
 export function encryptData(data, forNotPassword = true) {
-    if(forNotPassword){
-        data = data + process.env.ENCRYPT_KEY
+    if (forNotPassword) {
+        data = data + "-" + process.env.ENCRYPT_KEY
     }
     const cipher = crypto.createCipheriv(ecnryption_method, key, encryptionIV)
     return Buffer.from(
@@ -40,6 +40,6 @@ export function decryptData(encryptedData) {
     const decipher = crypto.createDecipheriv(ecnryption_method, key, encryptionIV)
     return (
         decipher.update(buff.toString('utf8'), 'hex', 'utf8') +
-            decipher.final('utf8')
-        ) // Decrypts data and converts to utf8
+        decipher.final('utf8')
+    ) // Decrypts data and converts to utf8
 }
