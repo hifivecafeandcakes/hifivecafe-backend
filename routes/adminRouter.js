@@ -1587,7 +1587,7 @@ router.post("/visitor/list", async (req, res) => {
                 user_name: item.user_name,
                 user_email: item.user_email,
                 user_mobile: item.user_mobile,
-                created_at: item.timestamp
+                created_at: format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm:ss')
             };
         });
         const response = { Response: { Success: "1", message: "Success", result: result } };
