@@ -1,7 +1,7 @@
 import { baseImageUrl, baseVideoUrl, deleteImageUrl, deleteVideoUrl } from '../constants.js';
 import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
-import { getUserInfo, validateEncrypt, reg, getStringDate, getQueryUsingTab } from '../helper.js';
+import { getUserInfo, validateEncrypt, reg, getStringDate, getQueryUsingTab, getIndianDateTime } from '../helper.js';
 import { createOrder, fetchPaymentDetails } from '../razorpay.js';
 import { format } from 'date-fns';
 import con from "../db.js";
@@ -23,6 +23,10 @@ const router = express.Router();
 const firstimgurl = baseImageUrl;
 const Arrayimgurl = baseImageUrl;
 
+const formatDate = await getIndianDateTime();
+const currentdate = await getIndianDateTime();
+const formatedate = await getIndianDateTime(); 
+
 // Website
 router.post('/register', async (req, res) => {
     try {
@@ -30,7 +34,7 @@ router.post('/register', async (req, res) => {
         let password = req.body.password;
         const email = req.body.email;
         const phone_number = req.body.phone;
-        const currentdate = new Date();
+        // const currentdate = new Date();
 
         if (name == "" || password == "" || email == "" || phone_number == "") {
             return res.send({ Response: { Success: '0', Message: "Please fill all fields", result: [] } });
@@ -145,6 +149,11 @@ router.get("/reservation/list", async (req, res) => {
         let sql;
         let objfile = {};
         let Arrayresposne = [];
+
+        console.log("formatDate");
+        console.log(formatDate);
+        console.log("currentdate");
+        console.log(currentdate);
         if (!reser_id) {
             sql = `select * from reservation where status="Active"`
         } else {
@@ -351,6 +360,8 @@ router.get("/reservation/category/subcategory", async (req, res) => {
             return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
         }
         userid = userInfo.user_id;
+        console.log("userInfo");
+        console.log(userInfo);
         console.log(userid);
         console.log(req.body);
         const userResult = await executeQuery(`SELECT * FROM users WHERE id = ? AND status = ?`, [userid, 'Active'], req.originalUrl || req.url); //check user exist in DB   
@@ -502,6 +513,7 @@ router.post("/reservation/booking/create", async (req, res) => {
         let userInfo = await getUserInfo(userid);
         if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
 
+
         if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
             return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
         }
@@ -559,7 +571,7 @@ router.post("/reservation/booking/create", async (req, res) => {
         let bookingStatus = (type == "TB") ? "Booked" : "Created";
         // ["Created","Booked"]
 
-        let formatDate = new Date();
+        // let formatDate = new Date();
         let reservationSubCategory = await executeQuery(`SELECT * FROM reservation_sub_category WHERE reser_sub_id = ?`, [resersubcatid], req.originalUrl || req.url); //check user exist in DB   
         let insertQuery = "";
         let sqlValues = [];
@@ -634,7 +646,7 @@ router.post("/reservation/booking/create", async (req, res) => {
                 let RazorpayOrder = razorPayCreate.order;
 
                 //Update razorpay_order_id
-                const formatedate = new Date()
+                // const formatedate = new Date()
                 const sql2 = `UPDATE reservation_booking SET razorpay_order_id=? ,updated_at=? WHERE booking_id=${reservationId}`;
                 con.query(sql2, [RazorpayOrder.id, formatedate], async (Error, result) => {
                     if (Error) {
@@ -715,7 +727,7 @@ router.post("/reservation/booking/update", async (req, res) => {
             razorpay_error_code, razorpay_error_description, razorpay_error_source, razorpay_error_step,
             razorpay_error_reason, razorpay_error_order_id, razorpay_error_payment_id } = req.body;
 
-        let formatedate = new Date()
+        // let formatedate = new Date()
 
         let bookingStatus = "Booked";
 
@@ -1039,7 +1051,7 @@ router.post("/forgot-password", async (req, res) => {
         const otp = crypto.randomInt(100000, 999999).toString();
         const otpExpires = Date.now() + 300000; // OTP expires in 5 minutes
 
-        const currentdate = new Date();
+        // const currentdate = new Date();
         let updateSQL = `UPDATE users SET otp=?, otp_expiry=?, updated_at=? WHERE email=?`;
         let update_sqlValues = [otp, otpExpires, currentdate, email];
         const insertOTP = await executeQuery(updateSQL, update_sqlValues, req.originalUrl || req.url);
@@ -1082,7 +1094,7 @@ router.post("/reset-password", async (req, res) => {
 
         newPassword = encryptData(newPassword.toString(), false);
 
-        const currentdate = new Date();
+        // const currentdate = new Date();
         let updateSQL = `UPDATE users SET otp=?, otp_expiry=?, password=?, updated_at=? WHERE email=?`;
         let update_sqlValues = [null, null, newPassword, currentdate, email];
 
@@ -1107,16 +1119,20 @@ router.post("/track/visitor", async (req, res) => {
         let user_name = null;
         let user_email = null;
         let user_mobile = null;
-        const currentdate = new Date();
+        // const currentdate = new Date();
         console.log(ip);
         console.log(browser);
         console.log(page);
+        console.log("userid");
+        console.log(userid);
         if (userid && userid != null && userid != "") {
             let userInfo = await getUserInfo(userid);
             console.log(userInfo);
-            user_name = userInfo.user_name;
-            user_email = userInfo.user_email;
-            user_mobile = userInfo.user_mobile;
+            if (userInfo != null) {
+                user_name = userInfo.user_name;
+                user_email = userInfo.user_email;
+                user_mobile = userInfo.user_mobile;
+            }
         }
 
         const visitor = await executeQuery(`INSERT INTO visitors (ip, browser,page,user_name,user_email,user_mobile,timestamp) VALUES (?, ?,?,?,?,?,?)`, [ip, browser, page, user_name, user_email, user_mobile, currentdate], req.originalUrl || req.url);

@@ -14,7 +14,7 @@ export const generateToken = () => {
 };
 
 export async function validateEncrypt(key) {
-    return (key === process.env.ENCRYPT_KEY.ENCRYPT_KEY) ? true : false;
+    return (key === process.env.ENCRYPT_KEY) ? true : false;
 };
 
 export async function reg(reg, v) {
@@ -97,4 +97,21 @@ export async function getQueryUsingPast(parm) {
         query = ` AND (reservation_booking.date <= CURRENT_DATE())`;
     }
     return query;
+}
+
+export async function getIndianDateTime() {
+
+    // Convert the UTC string to a Date object
+    const date = new Date();
+
+    // Convert to Indian Standard Time (IST) by adding 5 hours and 30 minutes
+    const istOffset = 5 * 60 + 30; // IST is UTC +5:30 (5 hours and 30 minutes)
+    const istDate = new Date(date.getTime() + istOffset * 60000); // Add the offset in milliseconds
+
+    // Format the date to the desired output (ISO 8601 format)
+    const formattedDateTime = istDate.toISOString();
+
+    console.log(formattedDateTime);  // Output will be in IST
+
+    return formattedDateTime;
 }

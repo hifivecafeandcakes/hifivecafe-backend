@@ -3,7 +3,7 @@ import { executeQuery } from '../dbHelper.js';
 import { encryptData, decryptData } from '../encryption.js'
 import { imageValidation } from '../validation.js';
 import { format } from 'date-fns'
-import { reg, generateToken, getQueryUsingTab, getQueryUsingUpcoming, getQueryUsingPast, getUserInfo } from '../helper.js';
+import { reg, generateToken, getQueryUsingTab, getQueryUsingUpcoming, getQueryUsingPast, getUserInfo, getIndianDateTime } from '../helper.js';
 import { moveImage, moveVideo, deleteImage, deleteImageByValue, deleteVideoFile } from '../fileHandler.js';
 
 import logger from '../logger.js';
@@ -12,6 +12,10 @@ import logger from '../logger.js';
 import express from 'express';
 const router = express.Router();
 
+const formatDate = await getIndianDateTime();
+const currentdate = await getIndianDateTime();
+const formattedDate = await getIndianDateTime();
+const formatedate = await getIndianDateTime(); 
 
 // http://localhost:3004/backend/admin/register?name=admin&email=admin@gmail.com&password=password&mobile=9629188839
 router.get("/register", async (req, res) => {
@@ -20,7 +24,7 @@ router.get("/register", async (req, res) => {
         let email = req.query.email;
         let password = req.query.password;
         let phone_number = req.query.mobile;
-        const currentdate = new Date();
+        // const currentdate = new Date();
 
         if (name == "" || password == "" || email == "" || phone_number == "") {
             return res.send({ Response: { success: '0', message: "Please fill all fields", result: [] } });
@@ -227,7 +231,7 @@ router.post("/reservation/add", async (req, res) => {
 
         let videoUrl = null;
         if (video != null && video != "") { videoUrl = await moveVideo(video); }
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
         // Insert data into MySQL table
         const insert_sql = `INSERT INTO reservation (reser_title,reser_code,reser_main_title, reser_image, description, extra_img,reser_videos, status, created_at) VALUES (?, ?,?, ?, ?, ?,?,?,?)`;
         const insert_sqlValues = [reser_title, reser_code, reser_main_title, imageUrl, description, imges, videoUrl, status, formattedDate];
@@ -288,7 +292,7 @@ router.post("/reservation/update", async (req, res) => {
             await deleteVideoFile("reservation", "reser_id", id, "reser_videos");
             videoUrl = await moveVideo(video);
         }
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
         const update_sql = `UPDATE reservation SET reser_title = ?, reser_main_title = ?, reser_code = ?, reser_image = ?, description = ?, extra_img = ?, reser_videos = ?,  status=?, updated_at = ? WHERE reser_id = ?`
         const update_sqlValues = [reser_title, reser_main_title, reser_code, imageUrl, description, imges, videoUrl, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
@@ -436,7 +440,7 @@ router.post("/reservation/category/add", async (req, res) => {
         const imageUrl = await moveImage(cat_image);
         console.log("imageUrl");
         console.log(imageUrl);
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
 
         const insert_sql = `INSERT INTO reservation_category (reser_cat_code, cat_title, reser_id, cat_image, price_range, status, created_at) VALUES (?, ?, ?,?, ?, ?,?)`;
         const insert_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate];
@@ -469,7 +473,7 @@ router.post("/reservation/category/update", async (req, res) => {
             imageUrl = await moveImage(cat_image);
         }
 
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
         const update_sql = `UPDATE reservation_category SET reser_cat_code=?, cat_title = ?, reser_id = ?, cat_image = ?, price_range = ?,  status=?, updated_at = ? WHERE cat_id = ?`
         const update_sqlValues = [reser_cat_code, cat_title, reser_id, imageUrl, price_range, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
@@ -665,7 +669,7 @@ router.post("/reservation/subcategory/add", async (req, res) => {
         const flowers_str = (!flowers || flowers == "") ? null : JSON.stringify(flowers);
         const flowersPrices_str = (!flowersPrices || flowersPrices == "") ? null : SON.stringify(flowersPrices);
 
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
 
         // Insert data into MySQL table
         const insert_sql = `INSERT INTO reservation_sub_category (sub_tilte, reser_cat_id, reser_id, sub_img,sub_extra_img,veg_images,nonveg_images, sub_cat_price_range,veg_menus,nonveg_menus,cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices,status,created_at) VALUES (?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
@@ -768,7 +772,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
         const flowers_str = (!flowers || flowers == "") ? null : JSON.stringify(flowers);
         const flowersPrices_str = (!flowersPrices || flowersPrices == "") ? null : SON.stringify(flowersPrices);
 
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
         const update_sql = `UPDATE reservation_sub_category SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
         const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
@@ -1309,7 +1313,7 @@ router.post("/reservation/booking/update", async (req, res) => {
         const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`, [], req.originalUrl || req.url)
         if (res_booking.length <= 0) { return res.json({ Response: { Success: '0', message: "Reservation Booking Record Not Found" } }); }
 
-        let formattedDate = new Date();
+        // let formattedDate = new Date();
 
         let userInfo = await getUserInfo(user_id);
         if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
@@ -1455,7 +1459,7 @@ router.post("/customer/add", async (req, res) => {
         const email = req.body.email;
         const status = req.body.status;
         const phone_number = req.body.mobile;
-        const currentdate = new Date();
+        // const currentdate = new Date();
 
         const profile_img = req.files && req.files.profile_img ? req.files.profile_img : null;
 
@@ -1488,7 +1492,7 @@ router.post("/customer/update", async (req, res) => {
         const email = req.body.email;
         const status = req.body.status;
         const phone_number = req.body.mobile;
-        const currentdate = new Date();
+        // const currentdate = new Date();
 
         const profile_img = req.files && req.files.profile_img ? req.files.profile_img : null;
 
@@ -1506,7 +1510,7 @@ router.post("/customer/update", async (req, res) => {
         }
 
 
-        const formattedDate = new Date();
+        // const formattedDate = new Date();
         const update_sql = `UPDATE users SET name = ?, mobile = ?, email = ?, status= ?, profile_img=?, updated_at = ? WHERE id = ?`
         const update_sqlValues = [name, phone_number, email, status, profile_img, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
@@ -1548,6 +1552,52 @@ router.get("/customer/delete/:id", async (req, res) => {
     }
 })
 
+
+//admin visitor list 
+router.post("/visitor/list", async (req, res) => {
+    let sql = `select * from visitors`;
+
+    let { pastTab } = req.body;
+
+    if (pastTab == "Yesterday") {
+        sql += ` where (DATE(visitors.timestamp) = CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (pastTab == "Oneweek") {
+        sql += ` where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 7 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (pastTab == "Twoweek") {
+        sql += ` where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 14 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else if (pastTab == "Onemonth") {
+        sql += ` where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 1 MONTH AND CURRENT_DATE() - INTERVAL 1 DAY)`;
+    } else {
+        sql += ` where DATE(visitors.timestamp) = CURRENT_DATE()`;
+    }
+    sql += ` order by visitors.id DESC`;
+
+    console.log(sql);
+
+    const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
+
+    if (exesqlquery.length > 0) {
+
+        const result = exesqlquery.map((item) => {
+            return {
+                id: item.id,
+                ip: item.ip,
+                browser: item.browser,
+                page: item.page,
+                user_name: item.user_name,
+                user_email: item.user_email,
+                user_mobile: item.user_mobile,
+                created_at: item.timestamp
+            };
+        });
+        const response = { Response: { Success: "1", message: "Success", result: result } };
+        return res.json(response);
+    }
+    else {
+        const response = { Response: { Success: "0", message: "No Records!", } };
+        return res.json(response);
+    }
+})
 
 
 //admin customer list 
