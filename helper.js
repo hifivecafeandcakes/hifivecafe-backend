@@ -109,7 +109,8 @@ export async function getIndianDateTime() {
     const istDate = new Date(date.getTime() + istOffset * 60000); // Add the offset in milliseconds
 
     // Format the date to the desired output (ISO 8601 format)
-    const formattedDateTime = istDate.toISOString();
+    // const formattedDateTime = istDate.toISOString();
+    const formattedDateTime = istDate.toISOString().replace('T', ' ').substring(0, 19);
 
     console.log(formattedDateTime);  // Output will be in IST
 
