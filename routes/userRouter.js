@@ -23,13 +23,11 @@ const router = express.Router();
 const firstimgurl = baseImageUrl;
 const Arrayimgurl = baseImageUrl;
 
-const formatDate = await getIndianDateTime();
-const currentdate = await getIndianDateTime();
-const formatedate = await getIndianDateTime(); 
 
 // Website
 router.post('/register', async (req, res) => {
     try {
+        const currentdate = await getIndianDateTime();
         const name = req.body.name;
         let password = req.body.password;
         const email = req.body.email;
@@ -145,6 +143,8 @@ router.post("/signin", async (req, res) => {
 
 router.get("/reservation/list", async (req, res) => {
     try {
+        const formatDate = await getIndianDateTime();
+        const currentdate = await getIndianDateTime();
         const reser_id = req.query.reser_id
         let sql;
         let objfile = {};
@@ -356,9 +356,9 @@ router.get("/reservation/category/subcategory", async (req, res) => {
         let userInfo = await getUserInfo(userid);
         if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
 
-        if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
-            return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
-        }
+        // if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
+        //     return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
+        // }
         userid = userInfo.user_id;
         console.log("userInfo");
         console.log(userInfo);
@@ -507,6 +507,9 @@ router.get("/reservation/category/subcategory", async (req, res) => {
 
 router.post("/reservation/booking/create", async (req, res) => {
     try {
+        const formatDate = await getIndianDateTime();
+        const formatedate = await getIndianDateTime();
+
 
         let { userid } = req.body;
         if (!userid) { return res.send({ Response: { Success: '0', Message: "User Id is required!", } }); }
@@ -514,9 +517,9 @@ router.post("/reservation/booking/create", async (req, res) => {
         if (userInfo == null || !userInfo.user_id) { return res.send({ Response: { Success: '0', Message: "User Info is required!", } }); }
 
 
-        if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
-            return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
-        }
+        // if (!await validateEncrypt(userInfo.ENCRYPT_KEY)) {
+        //     return res.send({ Response: { Success: '0', Message: "Key Validation Error", result: [] } });
+        // }
         userid = userInfo.user_id;
         console.log(userid);
         console.log(req.body);
@@ -697,6 +700,7 @@ router.post("/reservation/booking/create", async (req, res) => {
 router.post("/reservation/booking/update", async (req, res) => {
     try {
 
+        const formatedate = await getIndianDateTime();
         console.log("req.body");
         console.log(req.body);
         console.log("req.body1");
@@ -1046,6 +1050,7 @@ router.post("/check/booking/time_slot", async (req, res) => {
 router.post("/forgot-password", async (req, res) => {
     try {
         const { email } = req.body;
+        const currentdate = await getIndianDateTime();
         const userResult = await executeQuery(`SELECT * FROM users WHERE email = ? `, [email], req.originalUrl || req.url);
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email not registered in Hifive", } }); }
         const otp = crypto.randomInt(100000, 999999).toString();
@@ -1080,6 +1085,7 @@ router.post("/forgot-password", async (req, res) => {
 router.post("/reset-password", async (req, res) => {
     try {
         let { email, otp, newPassword } = req.body;
+        const currentdate = await getIndianDateTime();
 
         const userResult = await executeQuery(`SELECT * FROM users WHERE email = ? `, [email], req.originalUrl || req.url);
         if (userResult.length <= 0) { return res.send({ Response: { Success: '0', Message: "Email not registered in Hifive", } }); }
@@ -1115,6 +1121,7 @@ router.post("/reset-password", async (req, res) => {
 router.post("/track/visitor", async (req, res) => {
     try {
         let { ip, browser, page, userid } = req.body;
+        const currentdate = await getIndianDateTime();
 
         let user_name = null;
         let user_email = null;
@@ -1155,6 +1162,7 @@ router.post("/track/visitor", async (req, res) => {
 //booking mailing and whatsapp message
 router.post("/send/whatsapp/message", async (req, res) => {
     try {
+
         let cus = { user_mobile: 919629188839, user_name: "Loganath M", user_email: "logu.nath001@gmail.com" };
         let booking = { booking_id: "TESTBOOKING1", sub_title: "RED TABLE", date: "12-10-2025", time_slot: "11:00 pm to 12:30 pm", total_people: 5 };
         await sendMessage(cus,
@@ -1197,8 +1205,15 @@ router.post("/send/mail/message", async (req, res) => {
 });
 
 
-router.post("/testing", async (req, res) => {
+router.get("/testing", async (req, res) => {
     try {
+
+        const formatDate = await getIndianDateTime();
+        const currentdate = await getIndianDateTime();
+        const formatedate = await getIndianDateTime();
+        console.log(formatDate)
+        console.log(currentdate)
+        console.log(formatedate)
 
         logger.success(`Route: `);
         logger.error(`Route: `);

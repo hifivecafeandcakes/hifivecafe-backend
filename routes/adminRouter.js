@@ -12,14 +12,12 @@ import logger from '../logger.js';
 import express from 'express';
 const router = express.Router();
 
-const formatDate = await getIndianDateTime();
-const currentdate = await getIndianDateTime();
-const formattedDate = await getIndianDateTime();
-const formatedate = await getIndianDateTime(); 
-
 // http://localhost:3004/backend/admin/register?name=admin&email=admin@gmail.com&password=password&mobile=9629188839
 router.get("/register", async (req, res) => {
     try {
+
+        const currentdate = await getIndianDateTime();
+
         let name = req.query.name;
         let email = req.query.email;
         let password = req.query.password;
@@ -72,6 +70,7 @@ router.get("/register", async (req, res) => {
 // admin login
 router.post("/login/token", async (req, res) => {
     try {
+
         console.log('login');
         const { uname, pw } = req.body;
         let email = uname;
@@ -129,6 +128,7 @@ router.post("/login/token", async (req, res) => {
 
 //admin reservation list 
 router.get("/reservation/list", async (req, res) => {
+
     let sql = `select * from reservation order by reser_id ASC`
 
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -165,6 +165,7 @@ router.get("/reservation/list", async (req, res) => {
 
 
 router.get("/reservation/get/:id", async (req, res) => {
+
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -204,6 +205,8 @@ router.get("/reservation/get/:id", async (req, res) => {
 router.post("/reservation/add", async (req, res) => {
     try {
         // console.log(req.files);
+
+        const formattedDate = await getIndianDateTime();
         const { reser_title, reser_code, reser_main_title, description, status } = req.body;
         const reser_img = req.files && req.files.reser_img ? req.files.reser_img : null;
         const video = req.files && req.files.video ? req.files.video : null
@@ -248,6 +251,8 @@ router.post("/reservation/add", async (req, res) => {
 //admin reservation update 
 router.post("/reservation/update", async (req, res) => {
     try {
+
+        const formattedDate = await getIndianDateTime();
         const { id, reser_title, reser_code, reser_main_title, description, status } = req.body;
 
         const reser_img = req.files && req.files.reser_img ? req.files.reser_img : null;
@@ -307,6 +312,7 @@ router.post("/reservation/update", async (req, res) => {
 });
 
 router.get("/reservation/delete/:id", async (req, res) => {
+
     const { id } = req.params;
     let sql = `select * from reservation where reser_id=${id}`
     const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -348,6 +354,7 @@ router.get("/reservation/delete/:id", async (req, res) => {
 })
 
 router.get("/reservation/select", async (req, res) => {
+
     const exesqlquery = await executeQuery(`select * from reservation where status="Active" order by reser_id ASC`, [], req.originalUrl || req.url)
     let result = [];
     if (exesqlquery.length > 0) {
@@ -366,6 +373,7 @@ router.get("/reservation/select", async (req, res) => {
 
 //admin reservation catgeory list 
 router.get("/reservation/category/list", async (req, res) => {
+
     let sql = `select reservation_category.*, reservation.reser_main_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_category.cat_id ASC`
 
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -398,6 +406,7 @@ router.get("/reservation/category/list", async (req, res) => {
 
 
 router.get("/reservation/category/get/:id", async (req, res) => {
+
     const { id } = req.params;
     let sql = `select reservation_category.*, reservation.reser_title as reser_title from reservation_category LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reservation_category.cat_id=${id}`
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -430,6 +439,7 @@ router.get("/reservation/category/get/:id", async (req, res) => {
 router.post("/reservation/category/add", async (req, res) => {
     try {
         // console.log(req.files);
+        const formattedDate = await getIndianDateTime();
         const { cat_title, reser_id, reser_cat_code, price_range, status } = req.body;
         const cat_image = req.files ? req.files.cat_image : null;
 
@@ -457,6 +467,9 @@ router.post("/reservation/category/add", async (req, res) => {
 //admin reservation update 
 router.post("/reservation/category/update", async (req, res) => {
     try {
+
+        const formattedDate = await getIndianDateTime();
+
         const { id, reser_cat_code, cat_title, reser_id, price_range, status } = req.body;
 
         const cat_image = req.files && req.files.cat_image ? req.files.cat_image : null;
@@ -488,6 +501,7 @@ router.post("/reservation/category/update", async (req, res) => {
 });
 
 router.get("/reservation/category/delete/:id", async (req, res) => {
+
     const { id } = req.params;
     let sql = `select * from reservation_category where cat_id=${id}`
     const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -518,6 +532,7 @@ router.get("/reservation/category/delete/:id", async (req, res) => {
 
 //admin reservation list 
 router.get("/reservation/subcategory/list", async (req, res) => {
+
 
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.cat_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id order by reservation_sub_category.reser_sub_id ASC`
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -556,6 +571,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
 
 
 router.get("/reservation/subcategory/get/:id", async (req, res) => {
+
     const { id } = req.params;
     let sql = `select reservation_sub_category.*, reservation_category.cat_title as cat_title, reservation.reser_main_title as reser_title from reservation_sub_category LEFT JOIN reservation_category ON reservation_sub_category.reser_cat_id = reservation_category.reser_id LEFT JOIN reservation ON reservation.reser_id = reservation_category.reser_id where reser_sub_id=${id}`
     const exesqlquery = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -613,6 +629,7 @@ router.get("/reservation/subcategory/get/:id", async (req, res) => {
 router.post("/reservation/subcategory/add", async (req, res) => {
     try {
         // console.log(req.files);
+        const formattedDate = await getIndianDateTime();
         const { sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
         const sub_img = req.files && req.files.sub_img ? req.files.sub_img : null;
         const extra_imgs = req.files && req.files.img ? (Array.isArray(req.files.img) ? req.files.img : [req.files.img]) : [];
@@ -688,6 +705,9 @@ router.post("/reservation/subcategory/add", async (req, res) => {
 //admin reservation update 
 router.post("/reservation/subcategory/update", async (req, res) => {
     try {
+
+        const formattedDate = await getIndianDateTime();
+
         const { id, sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
         const sub_img = req.files && req.files.sub_img ? req.files.sub_img : null;
         const extra_imgs = req.files && req.files.img ? (Array.isArray(req.files.img) ? req.files.img : [req.files.img]) : [];
@@ -787,6 +807,8 @@ router.post("/reservation/subcategory/update", async (req, res) => {
 });
 
 router.get("/reservation/subcategory/delete/:id", async (req, res) => {
+
+
     const { id } = req.params;
     let sql = `select * from reservation_sub_category where reser_sub_id=${id}`
     const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -839,6 +861,7 @@ router.get("/reservation/subcategory/delete/:id", async (req, res) => {
 
 
 router.get("/category/select/:reser_id", async (req, res) => {
+
     const { reser_id } = req.params;
 
     let sql = `select * from reservation_category where status="Active" order by cat_id ASC`;
@@ -1308,6 +1331,9 @@ router.get("/reservation/booking/get/:booking_id", async (req, res) => {
 //admin reservation booking update status and comment 
 router.post("/reservation/booking/update", async (req, res) => {
     try {
+
+        const formattedDate = await getIndianDateTime();
+
         let { booking_id, user_id, status, comment } = req.body;
 
         const res_booking = await executeQuery(`select * from reservation_booking where booking_id=${booking_id}`, [], req.originalUrl || req.url)
@@ -1454,6 +1480,8 @@ router.get("/customer/get/:id", async (req, res) => {
 router.post("/customer/add", async (req, res) => {
     try {
         // console.log(req.files);
+
+        const currentdate = await getIndianDateTime();
         const name = req.body.name;
         let password = req.body.password;
         const email = req.body.email;
@@ -1485,6 +1513,7 @@ router.post("/customer/add", async (req, res) => {
 //admin customer update 
 router.post("/customer/update", async (req, res) => {
     try {
+        const formattedDate = await getIndianDateTime();
         console.log(req.body);
         const id = req.body.id;
         const name = req.body.name;
@@ -1526,6 +1555,7 @@ router.post("/customer/update", async (req, res) => {
 
 
 router.get("/customer/delete/:id", async (req, res) => {
+    
     const { id } = req.params;
     let sql = `select * from users where id=${id}`
     const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -1640,7 +1670,7 @@ router.get("/dashboard", async (req, res) => {
 
 router.get("/notification", async (req, res) => {
     let result = {};
-
+    
 
     let notificationBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1 AND (DATE(reservation_booking.created_at) = CURRENT_DATE())`, [], req.originalUrl || req.url);
 

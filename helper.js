@@ -112,7 +112,7 @@ export async function getIndianDateTime() {
     // const formattedDateTime = istDate.toISOString();
     const formattedDateTime = istDate.toISOString().replace('T', ' ').substring(0, 19);
 
-    console.log(formattedDateTime);  // Output will be in IST
+    // console.log(formattedDateTime);  // Output will be in IST
 
     return formattedDateTime;
 }
