@@ -309,6 +309,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
                     return {
                         reser_sub_id: item.reser_sub_id,
                         sub_tilte: item.sub_tilte,
+                        sub_cat_des: item.sub_cat_des,
                         reser_id: item.reser_id,
                         sub_img: baseImageUrl + item.sub_img,
                         reser_id: item.reser_id,
@@ -453,6 +454,7 @@ router.get("/reservation/category/subcategory", async (req, res) => {
                 return {
                     reser_sub_id: item.reser_sub_id,
                     sub_tilte: item.sub_tilte,
+                    sub_cat_des: item.sub_cat_des,
                     reser_id: item.reser_id,
                     sub_img: baseImageUrl + item.sub_img,
                     reser_id: item.reser_id,
@@ -920,6 +922,7 @@ router.post("/order/api", async (req, res) => {
                 return {
                     reser_sub_id: item.reser_sub_id,
                     sub_tilte: item.sub_tilte,
+                    sub_cat_des: item.sub_cat_des,
                     reser_id: item.reser_id,
                     sub_img: baseImageUrl + item.sub_img,
                     reser_id: item.reser_id,

@@ -547,6 +547,7 @@ router.get("/reservation/subcategory/list", async (req, res) => {
             return {
                 reser_sub_id: item.reser_sub_id,
                 sub_tilte: item.sub_tilte,
+                sub_cat_des: item.sub_cat_des,
                 reser_cat_id: item.reser_cat_id,
                 reser_cat_title: item.cat_title,
                 reser_id: item.reser_id,
@@ -589,6 +590,7 @@ router.get("/reservation/subcategory/get/:id", async (req, res) => {
             return {
                 reser_sub_id: item.reser_sub_id,
                 sub_tilte: item.sub_tilte,
+                sub_cat_des: item.sub_cat_des,
                 reser_cat_id: item.reser_cat_id,
                 reser_cat_title: item.cat_title,
                 reser_id: item.reser_id,
@@ -630,7 +632,7 @@ router.post("/reservation/subcategory/add", async (req, res) => {
     try {
         // console.log(req.files);
         const formattedDate = await getIndianDateTime();
-        const { sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
+        const { sub_tilte, sub_cat_des, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
         const sub_img = req.files && req.files.sub_img ? req.files.sub_img : null;
         const extra_imgs = req.files && req.files.img ? (Array.isArray(req.files.img) ? req.files.img : [req.files.img]) : [];
         const veg_images = req.files && req.files.veg_images ? (Array.isArray(req.files.veg_images) ? req.files.veg_images : [req.files.veg_images]) : [];
@@ -689,8 +691,8 @@ router.post("/reservation/subcategory/add", async (req, res) => {
         // const formattedDate = new Date();
 
         // Insert data into MySQL table
-        const insert_sql = `INSERT INTO reservation_sub_category (sub_tilte, reser_cat_id, reser_id, sub_img,sub_extra_img,veg_images,nonveg_images, sub_cat_price_range,veg_menus,nonveg_menus,cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices,status,created_at) VALUES (?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
-        const insert_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate];
+        const insert_sql = `INSERT INTO reservation_sub_category (sub_tilte, sub_cat_des, reser_cat_id, reser_id, sub_img,sub_extra_img,veg_images,nonveg_images, sub_cat_price_range,veg_menus,nonveg_menus,cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices,status,created_at) VALUES (?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`;
+        const insert_sqlValues = [sub_tilte, sub_cat_des, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate];
 
         const insert = await executeQuery(insert_sql, insert_sqlValues, req.originalUrl || req.url);
         if ((!insert.insertId || insert.insertId == null)) { return res.send({ Response: { Success: '0', message: "Reservation Sub category added Unsuccessfully!", result: [] } }); }
@@ -708,7 +710,7 @@ router.post("/reservation/subcategory/update", async (req, res) => {
 
         const formattedDate = await getIndianDateTime();
 
-        const { id, sub_tilte, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
+        const { id, sub_tilte, sub_cat_des, reser_cat_id, reser_id, sub_cat_price_range, veg_menus, nonveg_menus, cakes, photoShoots, photoShootPrices, photoPrints, photoPrintPrices, flowers, flowersPrices, status } = req.body;
         const sub_img = req.files && req.files.sub_img ? req.files.sub_img : null;
         const extra_imgs = req.files && req.files.img ? (Array.isArray(req.files.img) ? req.files.img : [req.files.img]) : [];
         const veg_images = req.files && req.files.veg_images ? (Array.isArray(req.files.veg_images) ? req.files.veg_images : [req.files.veg_images]) : [];
@@ -793,8 +795,8 @@ router.post("/reservation/subcategory/update", async (req, res) => {
         const flowersPrices_str = (!flowersPrices || flowersPrices == "") ? null : SON.stringify(flowersPrices);
 
         // const formattedDate = new Date();
-        const update_sql = `UPDATE reservation_sub_category SET sub_tilte=?, reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
-        const update_sqlValues = [sub_tilte, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
+        const update_sql = `UPDATE reservation_sub_category SET sub_tilte=?,sub_cat_des=?,  reser_cat_id=?, reser_id=?, sub_img=?,sub_extra_img=?,veg_images=?,nonveg_images=?, sub_cat_price_range=?,veg_menus=?,nonveg_menus=?, cakes=?, photoShoots=?, photoShootPrices=?, photoPrints=?, photoPrintPrices=?, flowers=?, flowersPrices=?, status=?, updated_at = ? WHERE reser_sub_id = ?`;
+        const update_sqlValues = [sub_tilte, sub_cat_des, reser_cat_id, reser_id, imageUrl, imges, veg_images_imges, nonveg_images_imges, sub_cat_price_range, veg_menus_str, nonveg_menus_str, cakes_str, photoShoots_str, photoShootPrices_str, photoPrints_str, photoPrintPrices_str, flowers_str, flowersPrices_str, status, formattedDate, id];
         const update = await executeQuery(update_sql, update_sqlValues, req.originalUrl || req.url);
         if ((update.changedRows == 1)) {
             return res.send({ Response: { Success: '1', message: "Reservation sub category Updated successfully!", result: [] } });
@@ -1555,7 +1557,7 @@ router.post("/customer/update", async (req, res) => {
 
 
 router.get("/customer/delete/:id", async (req, res) => {
-    
+
     const { id } = req.params;
     let sql = `select * from users where id=${id}`
     const deletingRecord = await executeQuery(sql, [], req.originalUrl || req.url)
@@ -1650,6 +1652,13 @@ router.get("/dashboard", async (req, res) => {
     let upcomingBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('upcoming'), [], req.originalUrl || req.url);
 
 
+    let yesterdayVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) = CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
+    let oneweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 7 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
+    let twoweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 14 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
+    let onemonthVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 1 MONTH AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
+    let todayVisitorCount = await executeQuery(`SELECT * FROM visitors WHERE DATE(visitors.timestamp) = CURRENT_DATE()`, [], req.originalUrl || req.url);
+
+
     result.customerActiveCount = (customerActiveCount.length > 0) ? customerActiveCount[0].count : 0;
     result.customerInactiveCount = (customerInactiveCount.length > 0) ? customerInactiveCount[0].count : 0;
     result.tableActiveCount = (tableActiveCount.length > 0) ? tableActiveCount[0].count : 0;
@@ -1659,6 +1668,12 @@ router.get("/dashboard", async (req, res) => {
     result.onweekBookingCount = (onweekBookingCount.length > 0) ? onweekBookingCount[0].count : 0;
     result.onemonthBookingCount = (onemonthBookingCount.length > 0) ? onemonthBookingCount[0].count : 0;
     result.upcomingBookingCount = (upcomingBookingCount.length > 0) ? upcomingBookingCount[0].count : 0;
+
+    result.yesterdayVisitorCount = (yesterdayVisitorCount.length > 0) ? yesterdayVisitorCount[0].count : 0;
+    result.oneweekVisitorCount = (oneweekVisitorCount.length > 0) ? oneweekVisitorCount[0].count : 0;
+    result.twoweekVisitorCount = (twoweekVisitorCount.length > 0) ? twoweekVisitorCount[0].count : 0;
+    result.onemonthVisitorCount = (onemonthVisitorCount.length > 0) ? onemonthVisitorCount[0].count : 0;
+    result.todayVisitorCount = (todayVisitorCount.length > 0) ? todayVisitorCount.length : 0;
 
     console.log(result);
 
@@ -1670,7 +1685,7 @@ router.get("/dashboard", async (req, res) => {
 
 router.get("/notification", async (req, res) => {
     let result = {};
-    
+
 
     let notificationBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1 AND (DATE(reservation_booking.created_at) = CURRENT_DATE())`, [], req.originalUrl || req.url);
 
