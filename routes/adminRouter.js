@@ -1652,11 +1652,11 @@ router.get("/dashboard", async (req, res) => {
     let upcomingBookingCount = await executeQuery(`SELECT count(*) as count from reservation_booking WHERE 1=1` + await getQueryUsingUpcoming('upcoming'), [], req.originalUrl || req.url);
 
 
-    let yesterdayVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) = CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
-    let oneweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 7 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
-    let twoweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 14 DAY AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
-    let onemonthVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 1 MONTH AND CURRENT_DATE() - INTERVAL 1 DAY)`, [], req.originalUrl || req.url);
-    let todayVisitorCount = await executeQuery(`SELECT * FROM visitors WHERE DATE(visitors.timestamp) = CURRENT_DATE()`, [], req.originalUrl || req.url);
+    let yesterdayVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) = CURRENT_DATE() - INTERVAL 1 DAY) GROUP BY visitors.ip`, [], req.originalUrl || req.url);
+    let oneweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 7 DAY AND CURRENT_DATE() - INTERVAL 1 DAY) GROUP BY visitors.ip`, [], req.originalUrl || req.url);
+    let twoweekVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 14 DAY AND CURRENT_DATE() - INTERVAL 1 DAY) GROUP BY visitors.ip`, [], req.originalUrl || req.url);
+    let onemonthVisitorCount = await executeQuery(`select * from visitors where (DATE(visitors.timestamp) BETWEEN CURRENT_DATE() - INTERVAL 1 MONTH AND CURRENT_DATE() - INTERVAL 1 DAY) GROUP BY visitors.ip`, [], req.originalUrl || req.url);
+    let todayVisitorCount = await executeQuery(`SELECT * FROM visitors WHERE DATE(visitors.timestamp) = CURRENT_DATE() GROUP BY visitors.ip`, [], req.originalUrl || req.url);
 
 
     result.customerActiveCount = (customerActiveCount.length > 0) ? customerActiveCount[0].count : 0;
@@ -1669,10 +1669,10 @@ router.get("/dashboard", async (req, res) => {
     result.onemonthBookingCount = (onemonthBookingCount.length > 0) ? onemonthBookingCount[0].count : 0;
     result.upcomingBookingCount = (upcomingBookingCount.length > 0) ? upcomingBookingCount[0].count : 0;
 
-    result.yesterdayVisitorCount = (yesterdayVisitorCount.length > 0) ? yesterdayVisitorCount[0].count : 0;
-    result.oneweekVisitorCount = (oneweekVisitorCount.length > 0) ? oneweekVisitorCount[0].count : 0;
-    result.twoweekVisitorCount = (twoweekVisitorCount.length > 0) ? twoweekVisitorCount[0].count : 0;
-    result.onemonthVisitorCount = (onemonthVisitorCount.length > 0) ? onemonthVisitorCount[0].count : 0;
+    result.yesterdayVisitorCount = (yesterdayVisitorCount.length > 0) ? yesterdayVisitorCount.length : 0;
+    result.oneweekVisitorCount = (oneweekVisitorCount.length > 0) ? oneweekVisitorCount.length : 0;
+    result.twoweekVisitorCount = (twoweekVisitorCount.length > 0) ? twoweekVisitorCount.length : 0;
+    result.onemonthVisitorCount = (onemonthVisitorCount.length > 0) ? onemonthVisitorCount.length : 0;
     result.todayVisitorCount = (todayVisitorCount.length > 0) ? todayVisitorCount.length : 0;
 
     console.log(result);
