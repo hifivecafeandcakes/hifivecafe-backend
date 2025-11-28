@@ -590,7 +590,7 @@ router.get("/reservation/subcategory/get/:id", async (req, res) => {
             return {
                 reser_sub_id: item.reser_sub_id,
                 sub_tilte: item.sub_tilte,
-                sub_cat_des: item.sub_cat_des,
+                sub_cat_des: (item.sub_cat_des != null) ? item.sub_cat_des : "",
                 reser_cat_id: item.reser_cat_id,
                 reser_cat_title: item.cat_title,
                 reser_id: item.reser_id,
